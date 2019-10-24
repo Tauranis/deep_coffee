@@ -19,3 +19,17 @@ docker build . -t deep_coffee
 ```
 docker run --rm --gpus all deep_coffee nvidia-smi
 ```
+
+## Playground
+
+Enter container
+```
+docker run -it -v ${PWD}/deep_coffee:/src/deep_coffee -v ${PWD}/test:/src/test --rm --gpus all deep_coffee bash
+```
+
+
+### Run unit tests
+```
+python -m unittest test.image_proc.test_OpenCVStream
+```
+
