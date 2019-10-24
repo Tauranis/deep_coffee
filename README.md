@@ -10,14 +10,8 @@
 
 ## Build image
 
-### Without GPU
 ```
-docker build -f Dockerfile -t deep_coffee
-```
-
-### With GPU
-```
-docker build -f Dockerfile_gpu -t deep_coffee
+docker build . -t deep_coffee
 ```
 
 ## Test image
