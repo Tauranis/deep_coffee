@@ -7,7 +7,7 @@ branches:
 
 before_install:
   - docker build . -t deep_coffee
-  - docker run -d --name app deep_coffee
+  - docker run -it -d --name app deep_coffee
 
 script:
   - docker exec app python -m unittest discover -s /app/test/image_proc
