@@ -50,6 +50,25 @@ class TestOpenCVStream(unittest.TestCase):
 
         self.assertTrue(frame_is_blue, "image not in RGB format")
 
+    def test_read_list(self):
+        stream = OpenCVStream(
+            [RED_IMAGE_PATH, GREEN_IMAGE_PATH, BLUE_IMAGE_PATH])
+
+        frame = stream.next_frame()
+        self.assertTrue(isinstance(frame, np.ndarray),
+                        "Error reading image #1")
+
+        frame = stream.next_frame()
+        self.assertTrue(isinstance(frame, np.ndarray),
+                        "Error reading image #2")
+
+        frame = stream.next_frame()
+        self.assertTrue(isinstance(frame, np.ndarray),
+                        "Error reading image #3")
+
+        frame = stream.next_frame()
+        self.assertTrue(frame is None, "Image #4 should not exist")
+
 
 if __name__ == '__main__':
     unittest.main()
