@@ -1,4 +1,5 @@
 # DEEP COFFEE - Deep Learning for coffee beans selection
+[![Build Status](https://travis-ci.com/Tauranis/deep_coffee.svg?branch=master)](https://travis-ci.com/Tauranis/deep_coffee)
 
 ## Install docker
 
