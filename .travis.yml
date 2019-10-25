@@ -1,0 +1,12 @@
+services:
+  - docker
+
+branches:
+  only:
+    - master
+
+before_install:
+  - docker build . -t deep_coffee
+
+script:
+  - docker run -v ${PWD}/deep_coffee:/src/deep_coffee -v ${PWD}/test:/src/test --rm deep_coffee python -m unittest discover -s /app/test/image_proc
