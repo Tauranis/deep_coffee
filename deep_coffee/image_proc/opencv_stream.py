@@ -9,7 +9,7 @@ class OpenCVStream(BaseVideoStream):
         super().__init__(stream_path)
 
         assert (isinstance(stream_path, str) or isinstance(stream_path, int)
-                or isinstance(stream_path, list)), "stream_path must be string or int"
+                or isinstance(stream_path, list)), "stream_path must be string or int or list of str"
 
         self._cap = None
         if not isinstance(stream_path, list):

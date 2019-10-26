@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 import os
-import glob
+import uuid
+import tqdm
+
+import argparse
+from deep_coffee.image_proc.opencv_stream import OpenCVStream
 
 
 class CropBeans_CV(object):
@@ -51,9 +55,34 @@ class CropBeans_CV(object):
                 image_c[bbox[1]:bbox[1]+bbox[3], bbox[0]:bbox[0]+bbox[2]])
         return obj_list
 
-
     def crop(self, frame):
         sample_bbox_list = self._get_bboxes(frame)
         bean_list = self._crop_objects(frame, sample_bbox_list)
 
         return bean_list
+
+
+def crop_beans(image_list, output_dir):
+
+    cropper = CropBeans_CV()
+
+    for image_filename in tqdm.tqdm(image_list):
+
+        stream = OpenCVStream(image_filename)
+        frame = stream.next_frame()
+        if frame is None:
+            break
+
+        bean_list = cropper.crop(frame)
+
+        for bean_image in bean_list:
+
+            bean_image_filename = os.path.join(output_dir, str(uuid.uuid5()))
+            cv2.imwrite(bean_image_filename, bean_image)
+
+
+# if __name__ == "__main__":
+
+#     args = argparse.ArgumentParser("Crop Beans")
+#     args.add_argument('--raw-images-dir',type=str,required=True)
+#     args.add_argument('--output-dir',type=str)

@@ -24,7 +24,11 @@ docker run --rm --gpus all deep_coffee nvidia-smi
 ## Playground
 
 ```
-docker run -it -v ${PWD}/deep_coffee:/src/deep_coffee -v ${PWD}/test:/src/test --rm --gpus all deep_coffee bash
+docker run -it \
+-v ${PWD}/deep_coffee:/src/deep_coffee \
+-v ${PWD}/test:/src/test \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee bash
 ```
 
 
