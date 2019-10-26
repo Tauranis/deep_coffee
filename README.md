@@ -9,6 +9,12 @@
 
 [Follow these steps](https://github.com/NVIDIA/nvidia-docker)
 
+## Download dataset
+
+```
+make install
+```
+
 ## Build image
 
 ```
