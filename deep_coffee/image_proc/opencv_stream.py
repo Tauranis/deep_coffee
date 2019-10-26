@@ -1,6 +1,11 @@
 from deep_coffee.image_proc.base_video_stream import BaseVideoStream
 import cv2
 
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class OpenCVStream(BaseVideoStream):
 
@@ -20,7 +25,7 @@ class OpenCVStream(BaseVideoStream):
     def next_frame(self):
 
         if isinstance(self.stream_path, list):
-            if self._i < len(self.stream_path):
+            if self._i < len(self.stream_path):                
                 frame = cv2.imread(self.stream_path[self._i])
                 self._i += 1
                 if frame is not None:

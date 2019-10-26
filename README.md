@@ -28,7 +28,6 @@ docker run --rm --gpus all deep_coffee nvidia-smi
 ```
 
 ## Playground
-
 ```
 docker run -it \
 -v ${PWD}/deep_coffee:/src/deep_coffee \
@@ -40,9 +39,17 @@ docker run -it \
 
 ### Run unit tests
 ```
-docker run -v ${PWD}/deep_coffee:/src/deep_coffee \
--v ${PWD}/test:/src/test \
+docker run \
 --rm --gpus all deep_coffee \
 python -m unittest discover -s /app/test/image_proc
 ```
 
+### Crop beans 
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.image_proc.crop_beans \
+--raw_images_dir /dataset/raw \
+--output_dir /dataset/cropped
+```

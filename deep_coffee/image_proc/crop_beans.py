@@ -1,11 +1,16 @@
+from deep_coffee.image_proc.opencv_stream import OpenCVStream
+import argparse
 import cv2
 import numpy as np
 import os
 import uuid
 import tqdm
+import glob
 
-import argparse
-from deep_coffee.image_proc.opencv_stream import OpenCVStream
+import logging
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 class CropBeans_CV(object):
@@ -62,14 +67,15 @@ class CropBeans_CV(object):
         return bean_list
 
 
-def crop_beans(image_list, output_dir):
+def crop_beans(image_list, output_dir, ext, min_area):
 
     cropper = CropBeans_CV()
+    stream = OpenCVStream(image_list)
 
-    for image_filename in tqdm.tqdm(image_list):
-
-        stream = OpenCVStream(image_filename)
+    pbar = tqdm.tqdm(total=len(image_list))
+    while True:
         frame = stream.next_frame()
+
         if frame is None:
             break
 
@@ -77,12 +83,27 @@ def crop_beans(image_list, output_dir):
 
         for bean_image in bean_list:
 
-            bean_image_filename = os.path.join(output_dir, str(uuid.uuid5()))
-            cv2.imwrite(bean_image_filename, bean_image)
+            if bean_image.shape[0]*bean_image.shape[1] >= min_area:
+                bean_image_filename = os.path.join(
+                    output_dir, str(uuid.uuid4())+"."+ext)
+
+                bean_image = cv2.cvtColor(
+                    bean_image, cv2.COLOR_RGB2BGR)  # convert to BGR
+                cv2.imwrite(bean_image_filename, bean_image)
+        pbar.update(1)
+
+    pbar.close()
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     args = argparse.ArgumentParser("Crop Beans")
-#     args.add_argument('--raw-images-dir',type=str,required=True)
-#     args.add_argument('--output-dir',type=str)
+    parser = argparse.ArgumentParser("Crop Beans")
+    parser.add_argument('--raw_images_dir', type=str, required=True)
+    parser.add_argument('--output_dir', type=str, required=True)
+    parser.add_argument('--ext', type=str, default='jpg')
+    parser.add_argument('--min_area', type=int, default=22500)  # 150x150
+    args = parser.parse_args()
+
+    raw_images_list = glob.glob(
+        "{}/*{}".format(args.raw_images_dir, args.ext), recursive=True)
+    crop_beans(raw_images_list, args.output_dir, args.ext, args.min_area)
