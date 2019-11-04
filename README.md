@@ -53,3 +53,15 @@ python -m deep_coffee.image_proc.crop_beans \
 --raw_images_dir /dataset/raw \
 --output_dir /dataset/cropped
 ```
+
+
+### Rotate beans 
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.image_proc.data_aug \
+--input_dir /dataset/good \
+--output_dir /dataset/good_rot \
+--angle_list 45,90,135,180,225,270
+```
