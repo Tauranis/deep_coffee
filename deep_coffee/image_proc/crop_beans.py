@@ -56,8 +56,29 @@ class CropBeans_CV(object):
         image_c = np.copy(image)
         obj_list = []
         for bbox in bbox_list:
-            obj_list.append(
-                image_c[bbox[1]:bbox[1]+bbox[3], bbox[0]:bbox[0]+bbox[2]])
+            bean_image = image_c[bbox[1]:(bbox[1] +
+                                          bbox[3]), bbox[0]:(bbox[0]+bbox[2])]
+
+            if bean_image.shape[0]*bean_image.shape[1] == 0:
+                continue
+
+            if (((bean_image.shape[0] > bean_image.shape[1]) and (bean_image.shape[0]/bean_image.shape[1] > 2))
+                    or ((bean_image.shape[1] > bean_image.shape[0]) and (bean_image.shape[1]/bean_image.shape[0] > 2))):
+                continue
+            
+            # pad image to be square
+            pad_size = 0
+            if bean_image.shape[0] < bean_image.shape[1]:
+                pad_size = int((bean_image.shape[1] - bean_image.shape[0])/2)
+                bean_image = cv2.copyMakeBorder(
+                    bean_image, pad_size, pad_size, 0, 0, cv2.BORDER_REPLICATE)
+            else:
+                pad_size = int((bean_image.shape[0] - bean_image.shape[1])/2)
+                bean_image = cv2.copyMakeBorder(
+                    bean_image, 0, 0, pad_size, pad_size, cv2.BORDER_REPLICATE)
+
+            obj_list.append(bean_image)
+
         return obj_list
 
     def crop(self, frame):
