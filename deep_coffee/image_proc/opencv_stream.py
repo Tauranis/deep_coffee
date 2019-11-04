@@ -25,7 +25,7 @@ class OpenCVStream(BaseVideoStream):
     def next_frame(self):
 
         if isinstance(self.stream_path, list):
-            if self._i < len(self.stream_path):                
+            if self._i < len(self.stream_path):
                 frame = cv2.imread(self.stream_path[self._i])
                 self._i += 1
                 if frame is not None:
@@ -46,3 +46,7 @@ class OpenCVStream(BaseVideoStream):
                     return None
             else:
                 return None
+
+    def save_frame(self, frame, filename):
+        bgr_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(filename, bgr_frame)

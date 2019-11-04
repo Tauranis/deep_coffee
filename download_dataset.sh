@@ -4,6 +4,12 @@ RAW_DATASET_FILE_ID="1qg7n_uLsMD5wa5LrVVHF6Gp0W8U5RcKN"
 CROPPED_FILENAME="dataset/cropped.zip"
 CROPPED_DATASET_FILE_ID="1Ctb3Mx3VM11PUHvkcOGWvwhqq1ThQ8Bq"
 
+GOOD_BEANS_FILENAME="dataset/good.zip"
+GOOD_BEANS_DATASET_FILE_ID="10YQSg-4cNw2mnqwtcGJUfLhBExY5VQzY"
+
+BAD_BEANS_FILENAME="dataset/bad.zip"
+BAD_BEANS_DATASET_FILE_ID="1GH22R8koR2289OYfQEx46x38tGZta6Zw"
+
 download_and_extract(){
     # Download dataset
     filename=$1
@@ -25,16 +31,12 @@ download_and_extract(){
 # Create dataset directory
 echo "Create dataset directory structure"
 mkdir -p dataset
-# mkdir -p dataset/train/good
-# mkdir -p dataset/train/bad
-# mkdir -p dataset/eval/good
-# mkdir -p dataset/eval/bad
-# mkdir -p dataset/test/good
-# mkdir -p dataset/test/bad
 
-# # Download dataset
+# Download dataset
 download_and_extract ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
 download_and_extract ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
+download_and_extract ${GOOD_BEANS_FILENAME} ${GOOD_BEANS_DATASET_FILE_ID}
+download_and_extract ${BAD_BEANS_FILENAME} ${BAD_BEANS_DATASET_FILE_ID}
 
 echo "Done"
 
