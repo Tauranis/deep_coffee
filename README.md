@@ -10,6 +10,8 @@
 [Follow these steps](https://github.com/NVIDIA/nvidia-docker)
 
 ## Download dataset
+It won't be download the augmented data, but only the original images.
+To perform data augmentation, read the full doc.
 
 ```
 make install
@@ -55,13 +57,36 @@ python -m deep_coffee.image_proc.crop_beans \
 ```
 
 
-### Rotate beans 
+### Data Augmentation
+
+Up to this day, only rotation is implemented
+
+**TODO**:
+
+* Saturation & Brightness
+* Noise
+* GANs
+
+#### Rotate beans 
+
+Good beans
 ```
 docker run \
 -v ${PWD}/dataset:/dataset \
 --rm --gpus all deep_coffee \
 python -m deep_coffee.image_proc.data_aug \
 --input_dir /dataset/good \
---output_dir /dataset/good_rot \
+--output_dir /dataset/good \
+--angle_list 45,90,135,180,225,270
+```
+
+Bad beans
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.image_proc.data_aug \
+--input_dir /dataset/bad \
+--output_dir /dataset/bad \
 --angle_list 45,90,135,180,225,270
 ```

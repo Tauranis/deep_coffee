@@ -20,18 +20,20 @@ class DataAugRotate(object):
         center_x, center_y = frame_width // 2, frame_height // 2
 
         rot_M = cv2.getRotationMatrix2D((center_x, center_y), angle, 1.0)
+        
+        return cv2.warpAffine(frame, rot_M, (frame_height, frame_width), borderMode=cv2.BORDER_REPLICATE)
 
-        cos = np.abs(rot_M[0, 0])
-        sin = np.abs(rot_M[0, 1])
+        # Add borders
+        # cos = np.abs(rot_M[0, 0])
+        # sin = np.abs(rot_M[0, 1])
 
-        rot_frame_height = int((frame_height * cos) + (frame_width * sin))
-        rot_frame_width = int((frame_height * cos) + (frame_width * sin))
+        # rot_frame_height = int((frame_height * cos) + (frame_width * sin))
+        # rot_frame_width = int((frame_height * cos) + (frame_width * sin))
 
-        rot_M[0, 2] += (rot_frame_width / 2) - center_x
-        rot_M[1, 2] += (rot_frame_height / 2) - center_y
+        # rot_M[0, 2] += (rot_frame_width / 2) - center_x
+        # rot_M[1, 2] += (rot_frame_height / 2) - center_y
 
         # return cv2.warpAffine(frame, rot_M, (rot_frame_height, rot_frame_width), borderMode=cv2.BORDER_REPLICATE)
-        return cv2.warpAffine(frame, rot_M, (rot_frame_height, rot_frame_width), borderMode=cv2.BORDER_CONSTANT, borderValue=255)
 
 
 def rotate_objects(image_list, output_dir, angle_list, ext):
