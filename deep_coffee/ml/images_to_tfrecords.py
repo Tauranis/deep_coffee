@@ -33,31 +33,43 @@ logger.setLevel(logging.INFO)
 CLASS_ID_BAD_BEAN = 0
 CLASS_ID_GOOD_BEAN = 1
 
-PREPROC_FN = {
-    "densenet": tf.keras.applications.densenet.preprocess_input,
-    "inception_resnet_v2": tf.keras.applications.inception_resnet_v2.preprocess_input,
-    "inception_v3": tf.keras.applications.inception_v3.preprocess_input,
-    "mobilenet": tf.keras.applications.mobilenet.preprocess_input,
-    "mobilenet_v2": tf.keras.applications.mobilenet_v2.preprocess_input,
-    "nasnet": tf.keras.applications.nasnet.preprocess_input,
-    "resnet": tf.keras.applications.resnet.preprocess_input,
-    "resnet50": tf.keras.applications.resnet50.preprocess_input,
-    "resnet_v2": tf.keras.applications.resnet_v2.preprocess_input,
-    "vgg16": tf.keras.applications.vgg16.preprocess_input,
-    "vgg19": tf.keras.applications.vgg19.preprocess_input,
-    "xception": tf.keras.applications.xception.preprocess_input
-}
+# PREPROC_FN = {
+#     "densenet": tf.keras.applications.densenet.preprocess_input,
+#     "inception_resnet_v2": tf.keras.applications.inception_resnet_v2.preprocess_input,
+#     "inception_v3": tf.keras.applications.inception_v3.preprocess_input,
+#     "mobilenet": tf.keras.applications.mobilenet.preprocess_input,
+#     "mobilenet_v2": tf.keras.applications.mobilenet_v2.preprocess_input,
+#     "nasnet": tf.keras.applications.nasnet.preprocess_input,
+#     "resnet": tf.keras.applications.resnet.preprocess_input,
+#     "resnet50": tf.keras.applications.resnet50.preprocess_input,
+#     "resnet_v2": tf.keras.applications.resnet_v2.preprocess_input,
+#     "vgg16": tf.keras.applications.vgg16.preprocess_input,
+#     "vgg19": tf.keras.applications.vgg19.preprocess_input,
+#     "xception": tf.keras.applications.xception.preprocess_input
+# }
 
 
-def _preprocess_fn(features, preprocessing_fn, new_shape):
+# def _preprocess_fn(features, preprocessing_fn, new_shape):
+def _preprocess_fn(features, new_shape):
+
+    # def __preprocess_image(_image_bytes):
+    #     __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
+    #     __image_tensor = tf.image.resize(__image_tensor, size=new_shape)
+    #     __image_tensor = preprocessing_fn(__image_tensor)
+    #     # __image_tensor = tf.image.convert_image_dtype(tf.image.resize(__image_tensor, size=new_shape),dtype=tf.uint8)
+    #     # __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=100)
+    #     return __image_tensor
+    # image_tensor = tf.map_fn(
+    #     __preprocess_image, features['image_bytes'], dtype=tf.float32)
 
     def __preprocess_image(_image_bytes):
-        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
-        __image_tensor = tf.image.resize(__image_tensor, size=new_shape)
+        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)        
+        __image_tensor = tf.image.convert_image_dtype(tf.image.resize(__image_tensor, size=new_shape),dtype=tf.uint8)
+        __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=95)
         return __image_tensor
 
     image_tensor = tf.map_fn(
-        __preprocess_image, features['image_bytes'], dtype=tf.float32)
+        __preprocess_image, features['image_bytes'], dtype=tf.string)
 
     output_features = {
         "image_preprocessed": image_tensor,
@@ -114,8 +126,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--image_dim', required=False, default=224, type=int)
     parser.add_argument('--ext', type=str, default='jpg')
-    parser.add_argument('--network', dest='network',
-                        type=str, required=False, default=None)
+    # parser.add_argument('--network', dest='network',
+    #                     type=str, required=False, default=None)
     parser.add_argument('--temp-dir', dest='temp_dir',
                         required=False, default='/tmp')
     known_args, pipeline_args = parser.parse_known_args()
@@ -140,13 +152,13 @@ if __name__ == '__main__':
 
     train_tfrecord_path = os.path.join(known_args.output_dir, 'train')
 
-    try:
-        preproc_fn = PREPROC_FN[known_args.network]
-    except KeyError:
-        logger.error(
-            "Unknown preprocessor for network {}".format(known_args.network))
-        import sys
-        sys.exit(0)
+    # try:
+    #     preproc_fn = PREPROC_FN[known_args.network]
+    # except KeyError:
+    #     logger.error(
+    #         "Unknown preprocessor for network {}".format(known_args.network))
+    #     import sys
+    #     sys.exit(0)
 
     pipeline_options = PipelineOptions(flags=pipeline_args)
 
@@ -166,7 +178,7 @@ if __name__ == '__main__':
 
             transformed_train, transform_fn = ((train_data, schema) |
                                                "Analyze and Transform - Train" >> impl.AnalyzeAndTransformDataset(
-                                                   lambda t: _preprocess_fn(t, preproc_fn, new_shape=(known_args.image_dim, known_args.image_dim))))
+                                                   lambda t: _preprocess_fn(t,new_shape=(known_args.image_dim, known_args.image_dim))))
             transformed_train_data, transformed_train_metadata = transformed_train
 
             _ = transformed_train_data | 'Write TFrecords - train' >> beam.io.tfrecordio.WriteToTFRecord(
