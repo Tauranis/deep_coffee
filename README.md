@@ -90,3 +90,27 @@ python -m deep_coffee.image_proc.data_aug \
 --output_dir /dataset/bad \
 --angle_list 45,90,135,180,225,270
 ```
+
+
+### Generate TFRecords
+
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.ml.images_to_tfrecords \
+--output_dir /dataset/tfrecords \
+--tft_artifacts_dir /dataset/tft_artifacts \
+--good_beans_dir /dataset/good \
+--good_beans_list_train /dataset/good_train_mini.txt \
+--good_beans_list_eval /dataset/good_eval.txt \
+--good_beans_list_test /dataset/good_test.txt \
+--bad_beans_dir /dataset/bad \
+--bad_beans_list_train /dataset/bad_train_mini.txt \
+--bad_beans_list_eval /dataset/bad_eval.txt \
+--bad_beans_list_test /dataset/bad_test.txt \
+--image_dim 224 \
+--ext jpg \
+--network mobilenet \
+--temp-dir /tmp
+```
