@@ -10,7 +10,10 @@ GOOD_BEANS_DATASET_FILE_ID="10YQSg-4cNw2mnqwtcGJUfLhBExY5VQzY"
 BAD_BEANS_FILENAME="dataset/bad.zip"
 BAD_BEANS_DATASET_FILE_ID="1GH22R8koR2289OYfQEx46x38tGZta6Zw"
 
-download_and_extract(){
+PROTOCOL_FILENAME="dataset/protocol.zip"
+PROTOCOL_DATASET_FILE_ID="1yhK87eLoo30_E-PAWBEd3tJk7kX66njX"
+
+download_and_extract_big_file(){
     # Download dataset
     filename=$1
     fileid=$2    
@@ -27,16 +30,27 @@ download_and_extract(){
     unzip ${filename} -d ./dataset
 }
 
+download_and_extract(){
+    # Download dataset
+    filename=$1
+    fileid=$2
+
+    wget --no-check-certificate "https://docs.google.com/uc?export=download&id=${fileid}" -O ${filename}
+    unzip ${filename} -d ./dataset
+    
+}
+
 
 # Create dataset directory
 echo "Create dataset directory structure"
 mkdir -p dataset
 
 # Download dataset
-download_and_extract ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
-download_and_extract ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
-download_and_extract ${GOOD_BEANS_FILENAME} ${GOOD_BEANS_DATASET_FILE_ID}
+download_and_extract_big_file ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
+download_and_extract_big_file ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
+download_and_extract_big_file ${GOOD_BEANS_FILENAME} ${GOOD_BEANS_DATASET_FILE_ID}
 download_and_extract ${BAD_BEANS_FILENAME} ${BAD_BEANS_DATASET_FILE_ID}
+download_and_extract ${PROTOCOL_FILENAME} ${PROTOCOL_DATASET_FILE_ID}
 
 echo "Done"
 

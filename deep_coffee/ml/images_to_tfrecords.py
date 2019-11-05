@@ -1,13 +1,10 @@
+import logging
 import argparse
-import numpy as np
-import datetime
 import os
-import sys
+
 import tensorflow as tf
-import json
 import apache_beam as beam
 import tensorflow_transform as tft
-from tensorflow.python.lib.io import file_io
 
 from tensorflow_transform.beam import impl
 from tensorflow_transform.tf_metadata import dataset_schema
@@ -17,15 +14,17 @@ from tensorflow_transform.coders import example_proto_coder
 from tensorflow_transform.tf_metadata import metadata_io
 from tensorflow_transform.beam.tft_beam_io import transform_fn_io, beam_metadata_io
 
+import multiprocessing
+N_CORES = multiprocessing.cpu_count()
+
 try:
     try:
-        from apache_beam.options.pipeline_options import PipelineOptions
+        from apache_beam.options.pipeline_options import PipelineOptions, DirectOptions
     except ImportError:
-        from apache_beam.utils.pipeline_options import PipelineOptions
+        from apache_beam.utils.pipeline_options import PipelineOptions, DirectOptions
 except ImportError:
-    from apache_beam.utils.options import PipelineOptions
+    from apache_beam.utils.options import PipelineOptions, DirectOptions
 
-import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,61 +32,36 @@ logger.setLevel(logging.INFO)
 CLASS_ID_BAD_BEAN = 0
 CLASS_ID_GOOD_BEAN = 1
 
-# PREPROC_FN = {
-#     "densenet": tf.keras.applications.densenet.preprocess_input,
-#     "inception_resnet_v2": tf.keras.applications.inception_resnet_v2.preprocess_input,
-#     "inception_v3": tf.keras.applications.inception_v3.preprocess_input,
-#     "mobilenet": tf.keras.applications.mobilenet.preprocess_input,
-#     "mobilenet_v2": tf.keras.applications.mobilenet_v2.preprocess_input,
-#     "nasnet": tf.keras.applications.nasnet.preprocess_input,
-#     "resnet": tf.keras.applications.resnet.preprocess_input,
-#     "resnet50": tf.keras.applications.resnet50.preprocess_input,
-#     "resnet_v2": tf.keras.applications.resnet_v2.preprocess_input,
-#     "vgg16": tf.keras.applications.vgg16.preprocess_input,
-#     "vgg19": tf.keras.applications.vgg19.preprocess_input,
-#     "xception": tf.keras.applications.xception.preprocess_input
-# }
 
-
-# def _preprocess_fn(features, preprocessing_fn, new_shape):
 def _preprocess_fn(features, new_shape):
 
-    # def __preprocess_image(_image_bytes):
-    #     __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
-    #     __image_tensor = tf.image.resize(__image_tensor, size=new_shape)
-    #     __image_tensor = preprocessing_fn(__image_tensor)
-    #     # __image_tensor = tf.image.convert_image_dtype(tf.image.resize(__image_tensor, size=new_shape),dtype=tf.uint8)
-    #     # __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=100)
-    #     return __image_tensor
-    # image_tensor = tf.map_fn(
-    #     __preprocess_image, features['image_bytes'], dtype=tf.float32)
-
     def __preprocess_image(_image_bytes):
-        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)        
-        __image_tensor = tf.image.convert_image_dtype(tf.image.resize(__image_tensor, size=new_shape),dtype=tf.uint8)
+        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
+        __image_tensor = tf.image.convert_image_dtype(
+            tf.image.resize(__image_tensor, size=new_shape), dtype=tf.uint8)
         __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=95)
         return __image_tensor
 
-    image_tensor = tf.map_fn(
+    _image_tensor = tf.map_fn(
         __preprocess_image, features['image_bytes'], dtype=tf.string)
 
-    output_features = {
-        "image_preprocessed": image_tensor,
+    _output_features = {
+        "image_preprocessed": _image_tensor,
         "target": features["target"]
     }
 
-    return output_features
+    return _output_features
 
 
 def _get_feature_spec():
 
-    schema_dict = {
+    _schema_dict = {
         'image_bytes': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
         'target': tf.io.FixedLenFeature(shape=[], dtype=tf.float32, default_value=None)
     }
 
     schema = dataset_metadata.DatasetMetadata(
-        schema_utils.schema_from_feature_spec(schema_dict))
+        schema_utils.schema_from_feature_spec(_schema_dict))
     return schema
 
 
@@ -126,8 +100,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--image_dim', required=False, default=224, type=int)
     parser.add_argument('--ext', type=str, default='jpg')
-    # parser.add_argument('--network', dest='network',
-    #                     type=str, required=False, default=None)
+
+    parser.add_argument('--n_shards', required=False, default=10, type=int)
+
     parser.add_argument('--temp-dir', dest='temp_dir',
                         required=False, default='/tmp')
     known_args, pipeline_args = parser.parse_known_args()
@@ -151,16 +126,12 @@ if __name__ == '__main__':
     list_test = good_beans_list_test + bad_beans_list_test
 
     train_tfrecord_path = os.path.join(known_args.output_dir, 'train')
-
-    # try:
-    #     preproc_fn = PREPROC_FN[known_args.network]
-    # except KeyError:
-    #     logger.error(
-    #         "Unknown preprocessor for network {}".format(known_args.network))
-    #     import sys
-    #     sys.exit(0)
+    eval_tfrecord_path = os.path.join(known_args.output_dir, 'eval')
+    test_tfrecord_path = os.path.join(known_args.output_dir, 'test')
 
     pipeline_options = PipelineOptions(flags=pipeline_args)
+    pipeline_options.view_as(DirectOptions).direct_num_workers = 1 if (
+        N_CORES-2) <= 0 else (N_CORES-2)
 
     # Preprocess dataset
     with beam.Pipeline(options=pipeline_options) as pipeline:
@@ -169,49 +140,53 @@ if __name__ == '__main__':
             schema = _get_feature_spec()
 
             # Process training data
-            pipe_train = (pipeline | beam.Create(list_train))
-
-            # _ = pipe_train | "PRINT pipe_train" >> beam.Map(print)
-
-            train_data = (pipe_train |
+            train_data = (pipeline |
+                          "Create train list" >> beam.Create(list_train) |
                           "Read Images - Train" >> beam.ParDo(ReadImageDoFn()))
 
             transformed_train, transform_fn = ((train_data, schema) |
                                                "Analyze and Transform - Train" >> impl.AnalyzeAndTransformDataset(
-                                                   lambda t: _preprocess_fn(t,new_shape=(known_args.image_dim, known_args.image_dim))))
+                                                   lambda t: _preprocess_fn(t, new_shape=(known_args.image_dim, known_args.image_dim))))
             transformed_train_data, transformed_train_metadata = transformed_train
 
             _ = transformed_train_data | 'Write TFrecords - train' >> beam.io.tfrecordio.WriteToTFRecord(
                 file_path_prefix=train_tfrecord_path,
                 file_name_suffix=".tfrecords",
-                num_shards=20,
+                num_shards=known_args.n_shards,
                 coder=example_proto_coder.ExampleProtoCoder(transformed_train_metadata.schema))
 
-            # # Process evaluation data
+            # Process evaluation data
+            eval_data = (pipeline |
+                         "Create eval list" >> beam.Create(list_eval) |
+                         "Read Images - Eval" >> beam.ParDo(ReadImageDoFn()))
 
-            # orders_by_date_eval = (raw_data_eval |
-            #                        "Merge SKUs - eval" >> beam.CombineGlobally(GroupItemsByDate(community_area_list, (split_datetime, end_datetime))))
+            transformed_eval = (((eval_data, schema), transform_fn) |
+                                "Transform - Eval" >> impl.TransformDataset())
 
-            # ts_windows_eval = (orders_by_date_eval | "Extract timeseries windows - eval" >>
-            #                    beam.ParDo(ExtractRawTimeseriesWindow(known_args.window_size)) |
-            #                    "Fusion breaker eval" >> beam.Reshuffle())
+            transformed_eval_data, transformed_eval_metadata = transformed_eval
 
-            # norm_ts_windows_eval = (((ts_windows_eval, schema), transform_fn) |
-            #                         "Transform - eval" >> impl.TransformDataset())
+            _ = transformed_eval_data | 'Write TFrecords - eval' >> beam.io.tfrecordio.WriteToTFRecord(
+                file_path_prefix=eval_tfrecord_path,
+                file_name_suffix=".tfrecords",
+                num_shards=known_args.n_shards,
+                coder=example_proto_coder.ExampleProtoCoder(transformed_eval_metadata.schema))
 
-            # norm_ts_windows_eval_data, norm_ts_windows_eval_metadata = norm_ts_windows_eval
+            # Process test data
+            test_data = (pipeline |
+                         "Create test list" >> beam.Create(list_test) |
+                         "Read Images - Test" >> beam.ParDo(ReadImageDoFn()))
 
-            # _ = norm_ts_windows_eval_data | 'Write TFrecords - eval' >> beam.io.tfrecordio.WriteToTFRecord(
-            #     file_path_prefix=eval_tfrecord_path,
-            #     file_name_suffix=".tfrecords",
-            #     coder=example_proto_coder.ExampleProtoCoder(norm_ts_windows_eval_metadata.schema))
+            transformed_test = (((test_data, schema), transform_fn) |
+                                "Transform - Test" >> impl.TransformDataset())
 
-            # # Dump raw eval set for further tensorflow model analysis
-            # _ = ts_windows_eval | 'Write TFrecords - eval raw' >> beam.io.tfrecordio.WriteToTFRecord(
-            #     file_path_prefix=eval_raw_tfrecord_path,
-            #     file_name_suffix=".tfrecords",
-            #     coder=example_proto_coder.ExampleProtoCoder(schema.schema))
+            transformed_test_data, transformed_test_metadata = transformed_test
 
-            # # Dump transformation graph
-            # _ = transform_fn | 'Dump Transform Function Graph' >> transform_fn_io.WriteTransformFn(
-            #     known_args.tft_artifacts_dir)
+            _ = transformed_test_data | 'Write TFrecords - test' >> beam.io.tfrecordio.WriteToTFRecord(
+                file_path_prefix=test_tfrecord_path,
+                file_name_suffix=".tfrecords",
+                num_shards=known_args.n_shards,
+                coder=example_proto_coder.ExampleProtoCoder(transformed_test_metadata.schema))
+
+            # Dump transformation graph
+            _ = transform_fn | 'Dump Transform Function Graph' >> transform_fn_io.WriteTransformFn(
+                known_args.tft_artifacts_dir)

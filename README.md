@@ -9,28 +9,23 @@
 
 [Follow these steps](https://github.com/NVIDIA/nvidia-docker)
 
-## Download dataset
-It won't be download the augmented data, but only the original images.
-To perform data augmentation, read the full doc.
+## Install
 
-```
+The command below will download the dataset, build the docker image and run the data preprocessing steps (data augmentation and create tfrecords)
+
+``` 
 make install
 ```
 
-## Build image
+## Test if image was build correctly
 
-```
-docker build . -t deep_coffee
-```
-
-## Test image
-
-```
+``` 
 docker run --rm --gpus all deep_coffee nvidia-smi
 ```
 
-## Playground
-```
+## Playground - enter inside container
+
+``` 
 docker run -it \
 -v ${PWD}/deep_coffee:/src/deep_coffee \
 -v ${PWD}/test:/src/test \
@@ -38,16 +33,19 @@ docker run -it \
 --rm --gpus all deep_coffee bash
 ```
 
-
 ### Run unit tests
-```
+
+``` 
 docker run \
 --rm --gpus all deep_coffee \
 python -m unittest discover -s /app/test/image_proc
 ```
 
-### Crop beans 
-```
+### Crop beans
+
+This is already performed if you previously have run `make install` 
+
+``` 
 docker run \
 -v ${PWD}/dataset:/dataset \
 --rm --gpus all deep_coffee \
@@ -56,8 +54,9 @@ python -m deep_coffee.image_proc.crop_beans \
 --output_dir /dataset/cropped
 ```
 
-
 ### Data Augmentation
+
+This is already performed if you previously have run `make install` 
 
 Up to this day, only rotation is implemented
 
@@ -67,10 +66,11 @@ Up to this day, only rotation is implemented
 * Noise
 * GANs
 
-#### Rotate beans 
+#### Rotate beans
 
 Good beans
-```
+
+``` 
 docker run \
 -v ${PWD}/dataset:/dataset \
 --rm --gpus all deep_coffee \
@@ -81,7 +81,8 @@ python -m deep_coffee.image_proc.data_aug \
 ```
 
 Bad beans
-```
+
+``` 
 docker run \
 -v ${PWD}/dataset:/dataset \
 --rm --gpus all deep_coffee \
@@ -91,10 +92,11 @@ python -m deep_coffee.image_proc.data_aug \
 --angle_list 45,90,135,180,225,270
 ```
 
-
 ### Generate TFRecords
 
-```
+This is already performed if you previously have run `make install` 
+
+``` 
 docker run \
 -v ${PWD}/dataset:/dataset \
 --rm --gpus all deep_coffee \
@@ -102,15 +104,17 @@ python -m deep_coffee.ml.images_to_tfrecords \
 --output_dir /dataset/tfrecords \
 --tft_artifacts_dir /dataset/tft_artifacts \
 --good_beans_dir /dataset/good \
---good_beans_list_train /dataset/good_train_mini.txt \
---good_beans_list_eval /dataset/good_eval.txt \
---good_beans_list_test /dataset/good_test.txt \
+--good_beans_list_train /dataset/protocol/good_train.txt \
+--good_beans_list_eval /dataset/protocol/good_eval.txt \
+--good_beans_list_test /dataset/protocol/good_test.txt \
 --bad_beans_dir /dataset/bad \
---bad_beans_list_train /dataset/bad_train_mini.txt \
---bad_beans_list_eval /dataset/bad_eval.txt \
---bad_beans_list_test /dataset/bad_test.txt \
+--bad_beans_list_train /dataset/protocol/bad_train.txt \
+--bad_beans_list_eval /dataset/protocol/bad_eval.txt \
+--bad_beans_list_test /dataset/protocol/bad_test.txt \
 --image_dim 224 \
+--n_shards 20 \
 --ext jpg \
 --network mobilenet \
 --temp-dir /tmp
 ```
+
