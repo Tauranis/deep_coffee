@@ -118,3 +118,17 @@ python -m deep_coffee.ml.images_to_tfrecords \
 --temp-dir /tmp
 ```
 
+### Train network
+
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.ml.train_and_evaluate \
+--output_dir /models \
+--tft_artifacts_dir /dataset/tft_artifacts \
+--input_dim 224 \
+--config_file /app/deep_coffee/ml/config/mobilenet.yml \
+--transfer_learning
+
+```
