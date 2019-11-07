@@ -17,6 +17,14 @@ The command below will download the dataset, build the docker image and run the 
 make install
 ```
 
+## Build docker image
+
+This is already performed if you previously have run `make install` 
+
+``` 
+docker build . -t deep_coffee
+```
+
 ## Test if image was build correctly
 
 ``` 
@@ -30,6 +38,7 @@ docker run -it \
 -v ${PWD}/deep_coffee:/src/deep_coffee \
 -v ${PWD}/test:/src/test \
 -v ${PWD}/dataset:/dataset \
+-v ${PWD}/trained_models:/trained_models \
 --rm --gpus all deep_coffee bash
 ```
 
@@ -120,15 +129,21 @@ python -m deep_coffee.ml.images_to_tfrecords \
 
 ### Train network
 
-```
+``` 
+export KERAS_HOME=/trained_models
+
 docker run \
 -v ${PWD}/dataset:/dataset \
+-v ${PWD}/trained_models:/trained_models \
 --rm --gpus all deep_coffee \
 python -m deep_coffee.ml.train_and_evaluate \
---output_dir /models \
+--output_dir /trained_models \
 --tft_artifacts_dir /dataset/tft_artifacts \
 --input_dim 224 \
+--trainset_len 6074 \
+--evalset_len 1300 \
+--testset_len 1300 \
 --config_file /app/deep_coffee/ml/config/mobilenet.yml \
 --transfer_learning
-
 ```
+

@@ -44,6 +44,7 @@ download_and_extract(){
 # Create dataset directory
 echo "Create dataset directory structure"
 mkdir -p dataset
+mkdir -p trained_models
 
 # Download dataset
 download_and_extract_big_file ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
