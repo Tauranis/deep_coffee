@@ -39,6 +39,7 @@ docker run -it \
 -v ${PWD}/test:/src/test \
 -v ${PWD}/dataset:/dataset \
 -v ${PWD}/trained_models:/trained_models \
+-v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
 --rm --gpus all deep_coffee bash
 ```
 
@@ -143,7 +144,6 @@ python -m deep_coffee.ml.train_and_evaluate \
 --trainset_len 6074 \
 --evalset_len 1300 \
 --testset_len 1300 \
---config_file /app/deep_coffee/ml/config/mobilenet.yml \
---transfer_learning
+--config_file /app/deep_coffee/ml/config/mobilenet.yml
 ```
 

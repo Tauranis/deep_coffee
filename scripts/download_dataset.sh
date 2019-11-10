@@ -45,6 +45,7 @@ download_and_extract(){
 echo "Create dataset directory structure"
 mkdir -p dataset
 mkdir -p trained_models
+mkdir -p keras_pretrained_models
 
 # Download dataset
 download_and_extract_big_file ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}

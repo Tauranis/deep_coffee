@@ -107,3 +107,4 @@ venv.bak/
 dataset/
 trained_models/
 depencendies/
+keras_pretrained_models/

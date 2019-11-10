@@ -1,14 +1,16 @@
 
 import logging
-from deep_coffee.ml.models import model_zoo
+from deep_coffee.ml.models import model_zoo, preproc_zoo
 from deep_coffee.ml.utils import list_tfrecords, PlotConfusionMatrixCallback
 from tensorflow_transform import TFTransformOutput
 from tensorflow_transform.beam.tft_beam_io import transform_fn_io
+from tf_explain.callbacks.grad_cam import GradCAMCallback
 import tensorflow as tf
 import argparse
 import yaml
 import os
 import datetime
+import numpy as np
 
 import multiprocessing
 N_CORES = multiprocessing.cpu_count()
@@ -17,9 +19,12 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+GRAD_CAM_GRID_SIZE = 16
+
 
 def input_fn(tfrecords_path,
              tft_metadata,
+             preproc_fn,
              image_shape,
              batch_size=8,
              shuffle=True,
@@ -36,10 +41,11 @@ def input_fn(tfrecords_path,
         Y = {}
 
         image_tensor = tf.io.decode_jpeg(
-            example['image_preprocessed'], channels=3)
+            example["image_preprocessed"], channels=3)
         image_tensor = tf.reshape(image_tensor, image_shape)
-        X['input_1'] = image_tensor / 255
-        Y['target'] = example['target']
+        image_tensor = tf.dtypes.cast(image_tensor, tf.float32)
+        X["input_1"] = preproc_fn(image_tensor)
+        Y["target"] = example["target"]
 
         return X, Y
 
@@ -53,40 +59,38 @@ def input_fn(tfrecords_path,
     dataset = dataset.map(_split_XY, num_parallel_calls=num_parallel_calls)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.batch(batch_size)
-    
+
     if shuffle:
         dataset = dataset.shuffle(buffer_size=batch_size * 5)
-    
+
     if repeat:
         dataset = dataset.repeat()
 
     return dataset
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--output_dir', required=True)
-    parser.add_argument('--tft_artifacts_dir', required=True)
-    parser.add_argument('--input_dim', required=False, default=224, type=int)
-    parser.add_argument('--trainset_len', required=True, type=int)
-    parser.add_argument('--evalset_len', required=True, type=int)
-    parser.add_argument('--testset_len', required=True, type=int)
-    parser.add_argument('--config_file', required=True)
-    parser.add_argument('--transfer_learning',
-                        required=False, action='store_true')
+    parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--tft_artifacts_dir", required=True)
+    parser.add_argument("--input_dim", required=False, default=224, type=int)
+    parser.add_argument("--trainset_len", required=True, type=int)
+    parser.add_argument("--evalset_len", required=True, type=int)
+    parser.add_argument("--testset_len", required=True, type=int)
+    parser.add_argument("--config_file", required=True)
     args = parser.parse_args()
 
     input_shape = [args.input_dim, args.input_dim, 3]
 
     config = yaml.load(tf.io.gfile.GFile(args.config_file).read())
 
-    logger.info('Load tfrecords...')
-    tfrecords_train = list_tfrecords(config['tfrecord_train'])
+    logger.info("Load tfrecords...")
+    tfrecords_train = list_tfrecords(config["tfrecord_train"])
     logger.info(tfrecords_train[:3])
-    tfrecords_eval = list_tfrecords(config['tfrecord_eval'])
+    tfrecords_eval = list_tfrecords(config["tfrecord_eval"])
     logger.info(tfrecords_eval[:3])
-    tfrecords_test = list_tfrecords(config['tfrecord_test'])
+    tfrecords_test = list_tfrecords(config["tfrecord_test"])
     logger.info(tfrecords_test[:3])
 
     # Load TFT metadata
@@ -95,73 +99,128 @@ if __name__ == '__main__':
     tft_metadata = TFTransformOutput(args.tft_artifacts_dir)
 
     model = model_zoo.get_model(
-        config['network_name'], input_shape=input_shape, transfer_learning=config['transfer_learning'])
+        config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
+    preproc_fn = preproc_zoo.get_preproc_fn(config["network_name"])
     logger.info(model.summary())
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=config['learning_rate']),
-                  loss='sparse_categorical_crossentropy',
-                  metrics=['accuracy'])
+    model.compile(optimizer=tf.keras.optimizers.Adam(lr=config["learning_rate"]),
+                  loss="sparse_categorical_crossentropy",
+                  metrics=["accuracy"])
 
-    steps_per_epoch_train = args.trainset_len // config['batch_size']
-    steps_per_epoch_eval = args.evalset_len // config['batch_size']
-    steps_per_epoch_test = args.testset_len // config['batch_size']
+    steps_per_epoch_train = args.trainset_len // config["batch_size"]
+    steps_per_epoch_eval = args.evalset_len // config["batch_size"]
+    steps_per_epoch_test = args.testset_len // config["batch_size"]
 
-    datetime_now_str = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    datetime_now_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = os.path.join(args.output_dir, datetime_now_str)
-    ckpt_dir = os.path.join(output_dir, 'model.ckpt')
-    tensorboard_dir = os.path.join(output_dir, 'tensorboard')
+    ckpt_dir = os.path.join(output_dir, "model.ckpt")
+    tensorboard_dir = os.path.join(output_dir, "tensorboard")
+
+    callback_list = []
 
     callback_save_ckpt = tf.keras.callbacks.ModelCheckpoint(filepath=ckpt_dir,
-                                                            monitor='val_loss',
+                                                            monitor="val_loss",
                                                             save_best_only=True,
-                                                            save_freq='epoch')
+                                                            save_freq="epoch")
+    callback_list.append(callback_save_ckpt)
+
     callback_tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_dir,
                                                           histogram_freq=2,
                                                           write_graph=True,
                                                           write_images=False,
-                                                          update_freq='epoch')
-    callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                          update_freq="epoch")
+    callback_list.append(callback_tensorboard)
+
+    callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
                                                            min_delta=5e-5,
-                                                           patience=20)
+                                                           patience=5)
+    callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
                                                                           tft_metadata,
+                                                                          preproc_fn,
                                                                           input_shape,
-                                                                          config['batch_size'],
+                                                                          config["batch_size"],
                                                                           shuffle=False,
                                                                           repeat=False),
                                                    class_names=[
-                                                       'Bad Beans', 'Good Beans'],
+                                                       "Bad Beans", "Good Beans"],
                                                    logdir=tensorboard_dir)
+    callback_list.append(callback_plot_cm)
 
-    model.fit(x=input_fn(tfrecords_train,
-                         tft_metadata,
-                         input_shape,
-                         config['batch_size']),
+    try:
+
+        # Gather 1 Batch for GradCAM callback
+        # TODO: https://github.com/sicara/tf-explain/issues/67
+        grad_cam_sample = input_fn(tfrecords_eval,
+                                   tft_metadata,
+                                   preproc_fn,
+                                   input_shape,
+                                   GRAD_CAM_GRID_SIZE*2,
+                                   shuffle=False,
+                                   repeat=False)
+        for class_index in [0, 1]:
+
+            grad_cam_x = []
+            _buff_size = 0
+
+            for grad_cam_sample_x, grad_cam_sample_y in grad_cam_sample:
+                grad_cam_sample_x = grad_cam_sample_x["input_1"].numpy()
+                grad_cam_sample_y = np.array([
+                    int(v) for v in grad_cam_sample_y["target"].numpy()])
+                class_index_i = np.where(grad_cam_sample_y == class_index)[0]
+                grad_cam_x.append(grad_cam_sample_x[class_index_i])
+
+                _buff_size += len(class_index_i)
+                if _buff_size >= GRAD_CAM_GRID_SIZE:
+                    break
+            grad_cam_x = np.concatenate(grad_cam_x, axis=0)[
+                :GRAD_CAM_GRID_SIZE]
+
+            for grad_cam_layer in config["grad_cam_layers"]:
+                callback_grad_cam = GradCAMCallback(
+                    validation_data=(grad_cam_x, None),
+                    layer_name=grad_cam_layer,
+                    class_index=class_index,
+                    output_dir=os.path.join(
+                        tensorboard_dir, "grad_cam", grad_cam_layer, "class_{}".format(class_index)),
+                )
+                callback_list.append(callback_grad_cam)
+    except KeyError:
+        pass
+
+    model.fit(x=input_fn(tfrecords_path=tfrecords_train,
+                         tft_metadata=tft_metadata,
+                         preproc_fn=preproc_fn,
+                         image_shape=input_shape,
+                         batch_size=config["batch_size"]),
               validation_data=input_fn(tfrecords_eval,
                                        tft_metadata,
+                                       preproc_fn,
                                        input_shape,
-                                       config['batch_size'],
+                                       config["batch_size"],
                                        shuffle=False),
               steps_per_epoch=steps_per_epoch_train,
               validation_steps=steps_per_epoch_eval,
-              epochs=config['epochs'],
-              callbacks=[callback_save_ckpt,
-                         callback_tensorboard,
-                         callback_plot_cm])
+              epochs=config["epochs"],
+              callbacks=callback_list,
+              class_weight={  # TODO: parameterize
+                  0: 0.65,
+                  1: 0.35
+    })
 
     # train_spec = tf.estimator.TrainSpec(
     #     input_fn=lambda: input_fn(tfrecords_train,
     #                               tft_metadata,
     #                               input_shape,
-    #                               config['batch_size']))
+    #                               config["batch_size"]))
     # # max_steps=steps_per_epoch_train*args.epochs)
 
     # eval_spec = tf.estimator.EvalSpec(
     #     input_fn=lambda: input_fn(tfrecords_eval,
     #                               tft_metadata,
     #                               input_shape,
-    #                               config['batch_size']))
+    #                               config["batch_size"]))
     # # steps=steps_per_epoch_eval*args.epochs)
 
     # run_config = tf.estimator.RunConfig(
@@ -174,7 +233,7 @@ if __name__ == '__main__':
     # model_estimator = tf.keras.estimator.model_to_estimator(
     #     keras_model=model, config=run_config)
 
-    # logger.info('Train')
+    # logger.info("Train")
     # tf.estimator.train_and_evaluate(estimator=model_estimator,
     #                                 train_spec=train_spec,
     #                                 eval_spec=eval_spec)

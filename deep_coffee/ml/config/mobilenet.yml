@@ -2,7 +2,12 @@ tfrecord_train: /dataset/tfrecords/train*
 tfrecord_eval: /dataset/tfrecords/eval*
 tfrecord_test: /dataset/tfrecords/test*
 network_name: mobilenet
-learning_rate : 0.0001
-batch_size: 32
-epochs: 5
-transfer_learning: true
+learning_rate : 0.0005
+batch_size: 64
+epochs: 20
+transfer_learning: false # train conv layers
+grad_cam_layers:
+  - conv1
+  - conv_pw_1
+  - conv_pw_3
+  - conv_pw_5

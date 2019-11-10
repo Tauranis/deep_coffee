@@ -44,7 +44,7 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
 
         # Draw confusion matrix
         figure = plt.figure(figsize=(5, 5))
-        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues,vmin=0.1, vmax=0.9)
+        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
         plt.title("Confusion matrix")
         # plt.colorbar()
         tick_marks = np.arange(len(self.class_names))
@@ -60,8 +60,8 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
                        [:, np.newaxis], decimals=2)
 
         # Use white text if squares are dark; otherwise black.
-        # threshold = cm.max() / 2.0
-        threshold = 0.5
+        threshold = cm.max() / 2.0
+        # threshold = 0.5
         for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
             color = "white" if cm[i, j] > threshold else "black"
             plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)

@@ -1,20 +1,21 @@
+import multiprocessing
+from tensorflow_transform.beam.tft_beam_io import transform_fn_io, beam_metadata_io
+from tensorflow_transform.tf_metadata import metadata_io
+from tensorflow_transform.coders import example_proto_coder
+from tensorflow_transform.tf_metadata import schema_utils
+from tensorflow_transform.tf_metadata import dataset_metadata
+from tensorflow_transform.tf_metadata import dataset_schema
+from tensorflow_transform.beam import impl
+import tensorflow_transform as tft
+import apache_beam as beam
+import tensorflow as tf
 import logging
 import argparse
 import os
+# Disable GPU, otherwise TFT will raise an error during the process
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-import tensorflow as tf
-import apache_beam as beam
-import tensorflow_transform as tft
 
-from tensorflow_transform.beam import impl
-from tensorflow_transform.tf_metadata import dataset_schema
-from tensorflow_transform.tf_metadata import dataset_metadata
-from tensorflow_transform.tf_metadata import schema_utils
-from tensorflow_transform.coders import example_proto_coder
-from tensorflow_transform.tf_metadata import metadata_io
-from tensorflow_transform.beam.tft_beam_io import transform_fn_io, beam_metadata_io
-
-import multiprocessing
 N_CORES = multiprocessing.cpu_count()
 
 try:
@@ -38,7 +39,7 @@ def _preprocess_fn(features, new_shape):
     def __preprocess_image(_image_bytes):
         __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
         __image_tensor = tf.image.convert_image_dtype(
-            tf.image.resize(__image_tensor, size=new_shape), dtype=tf.uint8)
+            tf.image.resize(__image_tensor, size=new_shape)/255.0, dtype=tf.uint8)
         __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=95)
         return __image_tensor
 

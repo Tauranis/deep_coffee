@@ -13,16 +13,19 @@ def mobilenet(input_shape, transfer_learning=True):
         include_top=False, input_shape=input_shape)
     base_model.trainable = not transfer_learning
 
-    head = tf.keras.layers.MaxPooling2D(pool_size=7)(base_model.output)
-    head = tf.keras.layers.Flatten()(head)
+    head = tf.keras.layers.MaxPooling2D(
+        pool_size=7, name="head_maxpool2D")(base_model.output)
+    head = tf.keras.layers.Flatten(name="head_flatten")(head)
     head = tf.keras.layers.Dense(64,
                                  activation='relu',
                                  kernel_regularizer=tf.keras.regularizers.L1L2(
-                                     l1=1e-4, l2=1e-4),
-                                 bias_regularizer=tf.keras.regularizers.L1L2(l1=1e-4, l2=1e-4))(head)
-    head = tf.keras.layers.Dense(2, activation='softmax',name='target')(head)
+                                     l1=1e-5, l2=1e-5),
+                                 bias_regularizer=tf.keras.regularizers.L1L2(
+                                     l1=1e-5, l2=1e-5),
+                                 name="head_dense_1")(head)
+    head = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
 
-    return tf.keras.Model(inputs=base_model.input,outputs=head)
+    return tf.keras.Model(inputs=base_model.input, outputs=head)
 
 
 MODEL_ZOO = {
