@@ -40,7 +40,7 @@ class CropBeans_CV(object):
             image_bin, cv2.MORPH_OPEN, morph_kernel, iterations=5)  # fill inside beans
 
         # get bbox
-        _, contours, _ = cv2.findContours(
+        contours, _ = cv2.findContours(
             image_bin, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         bbox_list = [cv2.boundingRect(c) for c in contours[1:]]
 

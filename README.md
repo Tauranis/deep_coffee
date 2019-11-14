@@ -130,6 +130,8 @@ python -m deep_coffee.ml.images_to_tfrecords \
 
 ### Train network
 
+**BEWARE** when training **ResNet** or **VGG** locally on your laptop, you're likely to get OOM. Decrease batch size to avoid this.
+
 ``` 
 export KERAS_HOME=/trained_models
 
