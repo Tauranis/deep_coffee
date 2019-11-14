@@ -7,6 +7,8 @@ logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+from deep_coffee.ml.models.coffee_net import coffee_net_v1
+
 
 def mobilenet(input_shape, transfer_learning=True):
     base_model = tf.keras.applications.MobileNet(
@@ -69,7 +71,7 @@ MODEL_ZOO = {
     "mobilenet": mobilenet,
     "resnet50": resnet50,
     "vgg16": vgg16,
-    # "vgg19": tf.keras.applications.VGG19
+    "coffee_net_v1": coffee_net_v1,
 }
 
 
