@@ -112,7 +112,7 @@ if __name__ == "__main__":
     steps_per_epoch_test = args.testset_len // config["batch_size"]
 
     datetime_now_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = os.path.join(args.output_dir, datetime_now_str)
+    output_dir = os.path.join(args.output_dir, config["network_name"],datetime_now_str)
     ckpt_dir = os.path.join(output_dir, "model.ckpt")
     tensorboard_dir = os.path.join(output_dir, "tensorboard")
 
@@ -132,8 +132,8 @@ if __name__ == "__main__":
     callback_list.append(callback_tensorboard)
 
     callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
-                                                           min_delta=5e-5,
-                                                           patience=5)
+                                                           min_delta=5e-4,
+                                                           patience=config["epochs"]//5)
     callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
