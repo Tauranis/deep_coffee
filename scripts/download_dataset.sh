@@ -1,8 +1,8 @@
 RAW_FILENAME="dataset/raw.zip"
 RAW_DATASET_FILE_ID="1qg7n_uLsMD5wa5LrVVHF6Gp0W8U5RcKN"
 
-CROPPED_FILENAME="dataset/cropped.zip"
-CROPPED_DATASET_FILE_ID="1Ctb3Mx3VM11PUHvkcOGWvwhqq1ThQ8Bq"
+# CROPPED_FILENAME="dataset/cropped.zip"
+# CROPPED_DATASET_FILE_ID="1Ctb3Mx3VM11PUHvkcOGWvwhqq1ThQ8Bq"
 
 GOOD_BEANS_FILENAME="dataset/good.zip"
 GOOD_BEANS_DATASET_FILE_ID="10YQSg-4cNw2mnqwtcGJUfLhBExY5VQzY"
@@ -49,7 +49,7 @@ mkdir -p keras_pretrained_models
 
 # Download dataset
 download_and_extract_big_file ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
-download_and_extract_big_file ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
+# download_and_extract_big_file ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
 download_and_extract_big_file ${GOOD_BEANS_FILENAME} ${GOOD_BEANS_DATASET_FILE_ID}
 download_and_extract ${BAD_BEANS_FILENAME} ${BAD_BEANS_DATASET_FILE_ID}
 download_and_extract ${PROTOCOL_FILENAME} ${PROTOCOL_DATASET_FILE_ID}

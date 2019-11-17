@@ -1,6 +1,7 @@
 
 import tensorflow as tf
 
+
 def coffee_net_v1(input_shape, transfer_learning=False):
     """
 
@@ -10,12 +11,6 @@ def coffee_net_v1(input_shape, transfer_learning=False):
         Conv2D_2
         Concat(Conv2D_1,Conv2D_2)    
         BatchNorm
-
-        Conv2D_1
-        Conv2D_2
-        Concat(Conv2D_1,Conv2D_2)
-        BatchNorm
-
         MaxPool2D
     ] X 5
 
@@ -71,8 +66,9 @@ def coffee_net_v1(input_shape, transfer_learning=False):
     block_2 = _coffee_block(block_1, n_filters=64, block_name="2")
     block_3 = _coffee_block(block_2, n_filters=128, block_name="3")
     block_4 = _coffee_block(block_3, n_filters=256, block_name="4")
+    block_5 = _coffee_block(block_4, n_filters=512, block_name="5")
 
-    global_avg_pool = tf.keras.layers.GlobalMaxPool2D(name="avg_pool")(block_4)
+    global_avg_pool = tf.keras.layers.GlobalAveragePooling2D(name="avg_pool")(block_5)
     flatten = tf.keras.layers.Flatten(name="flatten")(global_avg_pool)
     fc1 = tf.keras.layers.Dense(64,
                                 activation='relu',
@@ -81,6 +77,7 @@ def coffee_net_v1(input_shape, transfer_learning=False):
                                 bias_regularizer=tf.keras.regularizers.L1L2(
                                     l1=reg_val, l2=reg_val),
                                 name="head_dense_1")(flatten)
-    fc2 = tf.keras.layers.Dense(2, activation='softmax', name='target')(fc1)
+    dropout = tf.keras.layers.Dropout(rate=0.3,name="Dropout")(fc1)
+    fc2 = tf.keras.layers.Dense(2, activation='softmax', name='target')(dropout)
 
     return tf.keras.Model(inputs=input_tensor, outputs=fc2)

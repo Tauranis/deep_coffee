@@ -124,13 +124,12 @@ python -m deep_coffee.ml.images_to_tfrecords \
 --image_dim 224 \
 --n_shards 20 \
 --ext jpg \
---network mobilenet \
 --temp-dir /tmp
 ```
 
 ### Train network
 
-**BEWARE** when training **ResNet** or **VGG** locally on your laptop, you're likely to get OOM. Decrease batch size to avoid this.
+**BEWARE** when training **ResNet** or **VGG** locally on your laptop, you're likely to get OOM. Choose the batch size wisely.
 
 ``` 
 export KERAS_HOME=/trained_models
@@ -143,9 +142,9 @@ python -m deep_coffee.ml.train_and_evaluate \
 --output_dir /trained_models \
 --tft_artifacts_dir /dataset/tft_artifacts \
 --input_dim 224 \
---trainset_len 6074 \
---evalset_len 1300 \
---testset_len 1300 \
+--trainset_len 13032 \
+--evalset_len 2784 \
+--testset_len 2791 \
 --config_file /app/deep_coffee/ml/config/mobilenet.yml
 ```
 
