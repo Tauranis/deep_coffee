@@ -51,7 +51,7 @@ mkdir -p keras_pretrained_models
 download_and_extract_big_file ${RAW_FILENAME} ${RAW_DATASET_FILE_ID}
 # download_and_extract_big_file ${CROPPED_FILENAME} ${CROPPED_DATASET_FILE_ID}
 download_and_extract_big_file ${GOOD_BEANS_FILENAME} ${GOOD_BEANS_DATASET_FILE_ID}
-download_and_extract ${BAD_BEANS_FILENAME} ${BAD_BEANS_DATASET_FILE_ID}
+download_and_extract_big_file ${BAD_BEANS_FILENAME} ${BAD_BEANS_DATASET_FILE_ID}
 download_and_extract ${PROTOCOL_FILENAME} ${PROTOCOL_DATASET_FILE_ID}
 
 echo "Done"
