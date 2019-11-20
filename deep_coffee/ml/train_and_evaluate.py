@@ -109,7 +109,7 @@ if __name__ == "__main__":
                   # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
                   #   loss="sparse_categorical_crossentropy",
                   loss="binary_crossentropy",
-                  metrics=["accuracy"])
+                  metrics=["accuracy", tf.keras.metrics.AUC(num_thresholds=20)])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
     steps_per_epoch_eval = args.evalset_len // config["batch_size"]

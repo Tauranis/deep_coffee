@@ -39,8 +39,10 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
             Y_arr = np.array(Y_list)
             Y_pred_arr = np.array(Y_pred_list)
                 
-            fpr, tpr, _ = roc_curve(Y_arr, Y_pred_arr)
+            fpr, tpr, thresholds = roc_curve(Y_arr, Y_pred_arr)
             roc_auc = auc(fpr, tpr)
+
+            
 
             figure = plt.figure(figsize=(5, 5))            
             plt.plot(fpr, tpr, color='darkorange',lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
