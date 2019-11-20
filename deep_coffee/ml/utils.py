@@ -39,7 +39,7 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
             Y_arr = np.array(Y_list)
             Y_pred_arr = np.array(Y_pred_list)
                 
-            fpr, tpr, thresholds = roc_curve(Y_arr, Y_pred_arr)
+            fpr, tpr, _ = roc_curve(Y_arr, Y_pred_arr)
             roc_auc = auc(fpr, tpr)
 
             
@@ -73,11 +73,12 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
 
 class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, eval_input_fn, class_names, logdir):
+    def __init__(self, eval_input_fn, class_names, thresholds,logdir):
         self.eval_input_fn = eval_input_fn
         self.class_names = class_names
         self.summary_image_writer = tf.summary.create_file_writer(
             os.path.join(logdir, 'cm'))
+        self.thresholds = thresholds
 
     def on_epoch_end(self, epoch, logs):
 
@@ -89,52 +90,54 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
             X = data_dict[0]
             Y = data_dict[1]['target'].numpy().tolist()
 
-            Y_pred = np.argmax(self.model.predict(X), axis=1).tolist()
+            # Y_pred = np.argmax(self.model.predict(X), axis=1).tolist()
+            Y_pred = self.model.predict(X).tolist()
 
             Y_list += Y
             Y_pred_list += Y_pred
 
         Y_arr = np.array(Y_list)
-        Y_pred_arr = np.array(Y_pred_list)
-        cm = confusion_matrix(Y_arr, Y_pred_arr)
+        Y_pred_arr = np.array(Y_pred_list)        
 
-        # Draw confusion matrix
-        figure = plt.figure(figsize=(5, 5))
-        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-        plt.title("Confusion matrix")
-        # plt.colorbar()
-        tick_marks = np.arange(len(self.class_names))
-        plt.xticks(tick_marks, self.class_names, rotation=45)
-        plt.yticks(tick_marks, self.class_names)
+        for thresh in self.thresholds:
 
-        # ax = sns.heatmap(cm, annot=True, fmt="d")
-        # ax.set_xlabel("Ground Truth")
-        # ax.set_xlabel("Prediction")
+            Y_pred_arr_thresh = (Y_pred_arr > thresh).astype(np.float32)
 
-        # Normalize the confusion matrix.
-        cm = np.around(cm.astype('float') / cm.sum(axis=1)
-                       [:, np.newaxis], decimals=2)
+            cm = confusion_matrix(Y_arr, Y_pred_arr_thresh)
+        
+            # Draw confusion matrix
+            figure = plt.figure(figsize=(5, 5))
+            plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+            plt.title("Confusion matrix")
+            
+            tick_marks = np.arange(len(self.class_names))
+            plt.xticks(tick_marks, self.class_names, rotation=45)
+            plt.yticks(tick_marks, self.class_names)
 
-        # Use white text if squares are dark; otherwise black.
-        threshold = cm.max() / 2.0
-        # threshold = 0.5
-        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-            color = "white" if cm[i, j] > threshold else "black"
-            plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
+            # Normalize the confusion matrix.
+            cm = np.around(cm.astype('float') / cm.sum(axis=1)
+                        [:, np.newaxis], decimals=2)
 
-        plt.ylabel('Ground Truth')
-        plt.xlabel('Prediction')
-        plt.tight_layout()
+            # Use white text if squares are dark; otherwise black.
+            threshold = cm.max() / 2.0
+            # threshold = 0.5
+            for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+                color = "white" if cm[i, j] > threshold else "black"
+                plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
 
-        # Write image to tensorboard
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        plt.close(figure)
-        buf.seek(0)
-        # Convert PNG buffer to TF image
-        image = tf.image.decode_png(buf.getvalue(), channels=4)
-        # Add the batch dimension
-        image = tf.expand_dims(image, 0)
+            plt.ylabel('Ground Truth')
+            plt.xlabel('Prediction')
+            plt.tight_layout()
 
-        with self.summary_image_writer.as_default():
-            tf.summary.image("Confusion Matrix", image, step=epoch)
+            # Write image to tensorboard
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close(figure)
+            buf.seek(0)
+            # Convert PNG buffer to TF image
+            image = tf.image.decode_png(buf.getvalue(), channels=4)
+            # Add the batch dimension
+            image = tf.expand_dims(image, 0)
+
+            with self.summary_image_writer.as_default():
+                tf.summary.image("Confusion Matrix at threshold {}".format(thresh), image, step=epoch)

@@ -92,16 +92,15 @@ if __name__ == "__main__":
     logger.info(tfrecords_eval[:3])
     tfrecords_test = list_tfrecords(config["tfrecord_test"])
     logger.info(tfrecords_test[:3])
-    
+
     # Load TFT metadata
     tft_metadata_dir = os.path.join(
         args.tft_artifacts_dir, transform_fn_io.TRANSFORM_FN_DIR)
     tft_metadata = TFTransformOutput(args.tft_artifacts_dir)
     preproc_fn = preproc_zoo.get_preproc_fn(config["network_name"])
 
-
     model = model_zoo.get_model(
-        config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])    
+        config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
     logger.info(model.summary())
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
@@ -109,7 +108,29 @@ if __name__ == "__main__":
                   # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
                   #   loss="sparse_categorical_crossentropy",
                   loss="binary_crossentropy",
-                  metrics=["accuracy", tf.keras.metrics.AUC(num_thresholds=20)])
+                  metrics=[tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.05", threshold=0.05),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.10", threshold=0.10),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.20", threshold=0.20),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.30", threshold=0.30),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.40", threshold=0.40),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.50", threshold=0.50),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.60", threshold=0.60),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.70", threshold=0.70),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.80", threshold=0.80),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.90", threshold=0.90),
+        tf.keras.metrics.BinaryAccuracy(
+                      name="accuracy_at_0.95", threshold=0.95),
+        tf.keras.metrics.AUC(num_thresholds=20)])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
     steps_per_epoch_eval = args.evalset_len // config["batch_size"]
@@ -150,18 +171,20 @@ if __name__ == "__main__":
                                                                           repeat=False),
                                                    class_names=[
                                                        "Bad Beans", "Good Beans"],
+                                                   thresholds=[
+                                                       0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95],
                                                    logdir=tensorboard_dir)
     callback_list.append(callback_plot_cm)
 
     callback_plot_roc = PlotROCCurveCallback(eval_input_fn=input_fn(tfrecords_eval,
-                                                                   tft_metadata,
-                                                                   preproc_fn,
-                                                                   input_shape,
-                                                                   config["batch_size"],
-                                                                   shuffle=False,
-                                                                   repeat=False),
-                                            logdir=tensorboard_dir,
-                                            save_freq=1)
+                                                                    tft_metadata,
+                                                                    preproc_fn,
+                                                                    input_shape,
+                                                                    config["batch_size"],
+                                                                    shuffle=False,
+                                                                    repeat=False),
+                                             logdir=tensorboard_dir,
+                                             save_freq=1)
     callback_list.append(callback_plot_roc)
 
     try:
