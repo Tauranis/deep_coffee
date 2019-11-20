@@ -4,8 +4,8 @@ tfrecord_test: /dataset/tfrecords/test*
 network_name: resnet50
 learning_rate : 0.0005
 batch_size: 64
-epochs: 5
-transfer_learning: false # train conv layers
+epochs: 100
+transfer_learning: true # train conv layers
 # grad_cam_layers:
 #   - conv1
 #   - conv_pw_1

@@ -103,7 +103,9 @@ if __name__ == "__main__":
     preproc_fn = preproc_zoo.get_preproc_fn(config["network_name"])
     logger.info(model.summary())
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=config["learning_rate"]),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
+    #model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
+    #model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
                   loss="sparse_categorical_crossentropy",
                   metrics=["accuracy"])
 
@@ -134,7 +136,7 @@ if __name__ == "__main__":
     callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
                                                            min_delta=5e-4,
                                                            patience=config["epochs"]//5)
-    callback_list.append(callback_early_stop)
+    #callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
                                                                           tft_metadata,
@@ -205,8 +207,8 @@ if __name__ == "__main__":
               epochs=config["epochs"],
               callbacks=callback_list,
               class_weight={  # TODO: parameterize
-                  0: 0.65,
-                  1: 0.35
+                  0: 5*1.44,
+                  1: 0.76
     })
 
     # train_spec = tf.estimator.TrainSpec(
