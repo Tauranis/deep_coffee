@@ -1,7 +1,7 @@
 
 import logging
 from deep_coffee.ml.models import model_zoo, preproc_zoo
-from deep_coffee.ml.utils import list_tfrecords, PlotConfusionMatrixCallback
+from deep_coffee.ml.utils import list_tfrecords, PlotConfusionMatrixCallback, PlotROCCurveCallback
 from tensorflow_transform import TFTransformOutput
 from tensorflow_transform.beam.tft_beam_io import transform_fn_io
 from tf_explain.callbacks.grad_cam import GradCAMCallback
@@ -92,21 +92,23 @@ if __name__ == "__main__":
     logger.info(tfrecords_eval[:3])
     tfrecords_test = list_tfrecords(config["tfrecord_test"])
     logger.info(tfrecords_test[:3])
-
+    
     # Load TFT metadata
     tft_metadata_dir = os.path.join(
         args.tft_artifacts_dir, transform_fn_io.TRANSFORM_FN_DIR)
     tft_metadata = TFTransformOutput(args.tft_artifacts_dir)
+    preproc_fn = preproc_zoo.get_preproc_fn(config["network_name"])
+
 
     model = model_zoo.get_model(
-        config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
-    preproc_fn = preproc_zoo.get_preproc_fn(config["network_name"])
+        config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])    
     logger.info(model.summary())
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
-    #model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
-    #model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
-                  loss="sparse_categorical_crossentropy",
+                  # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
+                  # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
+                  #   loss="sparse_categorical_crossentropy",
+                  loss="binary_crossentropy",
                   metrics=["accuracy"])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
@@ -114,7 +116,8 @@ if __name__ == "__main__":
     steps_per_epoch_test = args.testset_len // config["batch_size"]
 
     datetime_now_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_dir = os.path.join(args.output_dir, config["network_name"],datetime_now_str)
+    output_dir = os.path.join(
+        args.output_dir, config["network_name"], datetime_now_str)
     ckpt_dir = os.path.join(output_dir, "model.ckpt")
     tensorboard_dir = os.path.join(output_dir, "tensorboard")
 
@@ -136,7 +139,7 @@ if __name__ == "__main__":
     callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
                                                            min_delta=5e-4,
                                                            patience=config["epochs"]//5)
-    #callback_list.append(callback_early_stop)
+    # callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
                                                                           tft_metadata,
@@ -149,6 +152,17 @@ if __name__ == "__main__":
                                                        "Bad Beans", "Good Beans"],
                                                    logdir=tensorboard_dir)
     callback_list.append(callback_plot_cm)
+
+    callback_plot_roc = PlotROCCurveCallback(eval_input_fn=input_fn(tfrecords_eval,
+                                                                   tft_metadata,
+                                                                   preproc_fn,
+                                                                   input_shape,
+                                                                   config["batch_size"],
+                                                                   shuffle=False,
+                                                                   repeat=False),
+                                            logdir=tensorboard_dir,
+                                            save_freq=1)
+    callback_list.append(callback_plot_roc)
 
     try:
 
@@ -207,7 +221,7 @@ if __name__ == "__main__":
               epochs=config["epochs"],
               callbacks=callback_list,
               class_weight={  # TODO: parameterize
-                  0: 5*1.44,
+                  0: 1.44,
                   1: 0.76
     })
 

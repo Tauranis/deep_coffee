@@ -137,6 +137,8 @@ export KERAS_HOME=/trained_models
 docker run \
 -v ${PWD}/dataset:/dataset \
 -v ${PWD}/trained_models:/trained_models \
+-v ${PWD}/deep_coffee:/src/deep_coffee \
+-v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
 --rm --gpus all deep_coffee \
 python -m deep_coffee.ml.train_and_evaluate \
 --output_dir /trained_models \

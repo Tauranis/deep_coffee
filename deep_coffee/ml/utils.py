@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 import io
 import os
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve, auc
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -13,6 +13,60 @@ mpl.use('Agg')
 
 def list_tfrecords(path_regex):
     return [f.numpy().decode('utf-8') for f in tf.data.Dataset.list_files(path_regex)]
+
+class PlotROCCurveCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, eval_input_fn, logdir, save_freq=1):
+        self.eval_input_fn = eval_input_fn        
+        self.summary_image_writer = tf.summary.create_file_writer(
+            os.path.join(logdir, 'roc'))
+        self.save_freq = save_freq
+    
+    def on_epoch_end(self, epoch, logs):
+
+        if ((epoch % self.save_freq == 0) or (epoch == 1)):
+            Y_list = []
+            Y_pred_list = []
+
+            for data_dict in self.eval_input_fn:
+                X = data_dict[0]
+                Y = data_dict[1]['target'].numpy().tolist()
+
+                Y_pred = np.squeeze(self.model.predict(X)).tolist()
+
+                Y_list += Y
+                Y_pred_list += Y_pred
+            Y_arr = np.array(Y_list)
+            Y_pred_arr = np.array(Y_pred_list)
+                
+            fpr, tpr, _ = roc_curve(Y_arr, Y_pred_arr)
+            roc_auc = auc(fpr, tpr)
+
+            figure = plt.figure(figsize=(5, 5))            
+            plt.plot(fpr, tpr, color='darkorange',lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+            plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+            plt.xlim([0.0, 1.0])
+            plt.ylim([0.0, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('ROC Curve')
+            plt.legend(loc="lower right")
+            
+            plt.tight_layout()
+
+            # Write image to tensorboard
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close(figure)
+            buf.seek(0)
+            # Convert PNG buffer to TF image
+            image = tf.image.decode_png(buf.getvalue(), channels=4)
+            # Add the batch dimension
+            image = tf.expand_dims(image, 0)
+
+            with self.summary_image_writer.as_default():
+                tf.summary.image("Confusion Matrix", image, step=epoch)
+
 
 
 class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
