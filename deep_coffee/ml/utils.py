@@ -32,7 +32,7 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
                 X = data_dict[0]
                 Y = data_dict[1]['target'].numpy().tolist()
 
-                Y_pred = np.squeeze(self.model.predict(X)).tolist()
+                Y_pred = np.squeeze(np.array(self.model.predict_on_batch(X))).tolist()
 
                 Y_list += Y
                 Y_pred_list += Y_pred
@@ -63,11 +63,40 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
             buf.seek(0)
             # Convert PNG buffer to TF image
             image = tf.image.decode_png(buf.getvalue(), channels=4)
+            buf.close()
+
             # Add the batch dimension
             image = tf.expand_dims(image, 0)
 
             with self.summary_image_writer.as_default():
-                tf.summary.image("Confusion Matrix", image, step=epoch)
+                tf.summary.image("ROC Curve", image, step=epoch)
+
+            # Plot score distribution
+            figure = plt.figure(figsize=(5, 5))
+            Y_pos_i = Y_arr.astype(np.bool)
+            Y_neg_i = np.logical_not(Y_pos_i)
+            Y_pred_pos_arr = Y_pred_arr[Y_pos_i]
+            Y_pred_neg_arr = Y_pred_arr[Y_neg_i]
+
+            sns.distplot( Y_pred_pos_arr, color="skyblue", label="Good Beans", norm_hist=True)
+            sns.distplot( Y_pred_neg_arr, color="red", label="Bad Beans", norm_hist=True)
+            plt.xlim(0, 1)
+            plt.legend()
+
+            # Write image to tensorboard
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close(figure)
+            buf.seek(0)
+            # Convert PNG buffer to TF image
+            image = tf.image.decode_png(buf.getvalue(), channels=4)
+            # Add the batch dimension
+            image = tf.expand_dims(image, 0)
+
+            with self.summary_image_writer.as_default():
+                tf.summary.image("Score Distribution", image, step=epoch)
+
+            plt.close('all')
 
 
 
@@ -91,7 +120,7 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
             Y = data_dict[1]['target'].numpy().tolist()
 
             # Y_pred = np.argmax(self.model.predict(X), axis=1).tolist()
-            Y_pred = self.model.predict(X).tolist()
+            Y_pred = np.array(self.model.predict_on_batch(X)).tolist()
 
             Y_list += Y
             Y_pred_list += Y_pred
@@ -136,8 +165,11 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
             buf.seek(0)
             # Convert PNG buffer to TF image
             image = tf.image.decode_png(buf.getvalue(), channels=4)
+            buf.close()
+
             # Add the batch dimension
             image = tf.expand_dims(image, 0)
 
             with self.summary_image_writer.as_default():
                 tf.summary.image("Confusion Matrix at threshold {}".format(thresh), image, step=epoch)
+            plt.close('all')

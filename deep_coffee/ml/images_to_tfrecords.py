@@ -109,18 +109,18 @@ if __name__ == '__main__':
     known_args, pipeline_args = parser.parse_known_args()
 
     good_beans_list_train = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_train).read().split("\n")]
+        known_args.good_beans_list_train).read().split("\n")[:-1]]
     good_beans_list_eval = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_eval).read().split("\n")]
+        known_args.good_beans_list_eval).read().split("\n")[:-1]]
     good_beans_list_test = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_test).read().split("\n")]
+        known_args.good_beans_list_test).read().split("\n")[:-1] ]
 
     bad_beans_list_train = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_train).read().split("\n")]
+        known_args.bad_beans_list_train).read().split("\n")[:-1]]
     bad_beans_list_eval = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_eval).read().split("\n")]
+        known_args.bad_beans_list_eval).read().split("\n")[:-1]]
     bad_beans_list_test = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_test).read().split("\n")]
+        known_args.bad_beans_list_test).read().split("\n")[:-1]]
 
     list_train = good_beans_list_train + bad_beans_list_train
     list_eval = good_beans_list_eval + bad_beans_list_eval
@@ -129,6 +129,14 @@ if __name__ == '__main__':
     train_tfrecord_path = os.path.join(known_args.output_dir, 'train')
     eval_tfrecord_path = os.path.join(known_args.output_dir, 'eval')
     test_tfrecord_path = os.path.join(known_args.output_dir, 'test')
+
+    #logger.info(list_train)
+    #logger.info(list_eval)
+    #logger.info(list_test)
+
+    #print(list_train[:10])
+    #import sys
+    #sys.exit(0)
 
     pipeline_options = PipelineOptions(flags=pipeline_args)
     pipeline_options.view_as(DirectOptions).direct_num_workers = 1 if (

@@ -12,6 +12,8 @@ import os
 import datetime
 import numpy as np
 
+#tf.compat.v1.disable_eager_execution()
+
 import multiprocessing
 N_CORES = multiprocessing.cpu_count()
 
@@ -49,19 +51,20 @@ def input_fn(tfrecords_path,
 
         return X, Y
 
-    num_parallel_calls = N_CORES-1
-    if num_parallel_calls <= 0:
-        num_parallel_calls = 1
+    num_parallel_calls = None # N_CORES-1
+    #if num_parallel_calls <= 0:
+    #    num_parallel_calls = 1
 
     dataset = tf.data.TFRecordDataset(tfrecords_path, compression_type="")
     dataset = dataset.map(_parse_example,
                           num_parallel_calls=num_parallel_calls)
     dataset = dataset.map(_split_XY, num_parallel_calls=num_parallel_calls)
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.batch(batch_size)
+    #dataset = dataset.prefetch(1) #tf.data.experimental.AUTOTUNE)
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=batch_size * 5)
+        dataset = dataset.shuffle(buffer_size=batch_size * 3)
 
     if repeat:
         dataset = dataset.repeat()
@@ -103,33 +106,13 @@ if __name__ == "__main__":
         config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
     logger.info(model.summary())
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
+    #model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
                   # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
-                  # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
+    model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
                   #   loss="sparse_categorical_crossentropy",
                   loss="binary_crossentropy",
-                  metrics=[tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.05", threshold=0.05),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.10", threshold=0.10),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.20", threshold=0.20),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.30", threshold=0.30),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.40", threshold=0.40),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.50", threshold=0.50),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.60", threshold=0.60),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.70", threshold=0.70),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.80", threshold=0.80),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.90", threshold=0.90),
-        tf.keras.metrics.BinaryAccuracy(
-                      name="accuracy_at_0.95", threshold=0.95),
+                  metrics=[tf.keras.metrics.Precision(
+                      name="Precision", thresholds=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]),
         tf.keras.metrics.AUC(num_thresholds=20)])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
@@ -148,19 +131,20 @@ if __name__ == "__main__":
                                                             monitor="val_loss",
                                                             save_best_only=True,
                                                             save_freq="epoch")
-    callback_list.append(callback_save_ckpt)
+    #callback_list.append(callback_save_ckpt)
 
     callback_tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_dir,
-                                                          histogram_freq=2,
+                                                          histogram_freq=10,
                                                           write_graph=True,
                                                           write_images=False,
+                                                          profile_batch=0,
                                                           update_freq="epoch")
     callback_list.append(callback_tensorboard)
 
     callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
-                                                           min_delta=5e-4,
-                                                           patience=config["epochs"]//5)
-    # callback_list.append(callback_early_stop)
+                                                           min_delta=5e-3,
+                                                           patience=10)
+    callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
                                                                           tft_metadata,
@@ -172,7 +156,7 @@ if __name__ == "__main__":
                                                    class_names=[
                                                        "Bad Beans", "Good Beans"],
                                                    thresholds=[
-                                                       0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95],
+                                                       0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
                                                    logdir=tensorboard_dir)
     callback_list.append(callback_plot_cm)
 
@@ -243,9 +227,10 @@ if __name__ == "__main__":
               validation_steps=steps_per_epoch_eval,
               epochs=config["epochs"],
               callbacks=callback_list,
+              #callbacks=None,
               class_weight={  # TODO: parameterize
-                  0: 1.44,
-                  1: 0.76
+                  0: 1.862,
+                  1: 0.683
     })
 
     # train_spec = tf.estimator.TrainSpec(

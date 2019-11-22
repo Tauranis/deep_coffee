@@ -24,7 +24,7 @@ def coffee_net_v1(input_shape, transfer_learning=False):
 
     """
 
-    reg_val = 5e-4
+    reg_val = 5e-5
 
     def _coffee_block(input_tensor, n_filters, activation='relu', block_name="1"):
         _conv1 = tf.keras.layers.Conv2D(n_filters,
@@ -78,15 +78,15 @@ def coffee_net_v1(input_shape, transfer_learning=False):
 
     global_avg_pool = tf.keras.layers.GlobalMaxPooling2D(
         name="global_max_pool")(block_5)
-    flatten = tf.keras.layers.Flatten(name="flatten")(global_avg_pool)
+    # flatten = tf.keras.layers.Flatten(name="flatten")(global_avg_pool)
+    dropout = tf.keras.layers.Dropout(rate=0.5,name="Dropout")(global_avg_pool)
     fc1 = tf.keras.layers.Dense(64,
                                 activation=None,
                                 kernel_regularizer=tf.keras.regularizers.l2(l=reg_val),
                                 bias_regularizer=tf.keras.regularizers.l2(l=reg_val),
-                                name="head_dense_1")(flatten)
+                                name="head_dense_1")(dropout)
     head = tf.keras.layers.BatchNormalization(name="batch_norm")(fc1)
     head = tf.keras.layers.Activation(activation="relu")(head)
-    # dropout = tf.keras.layers.Dropout(rate=0.3,name="Dropout")(fc1)
     # fc2 = tf.keras.layers.Dense(2, activation='softmax', name='target')(dropout)
     fc2 = tf.keras.layers.Dense(
         1, activation='sigmoid', name='target')(head)

@@ -18,14 +18,15 @@ def mobilenet(input_shape, transfer_learning=True):
     #    pool_size=7, name="head_maxpool2D")(base_model.output)
     # head = tf.keras.layers.GlobalAveragePooling2D(name="avg_pool")(base_model.output)
     head = tf.keras.layers.GlobalMaxPool2D(name="avg_pool")(base_model.output)
-    #head = tf.keras.layers.Flatten(name="head_flatten")(head)
-    # head = tf.keras.layers.Dropout(rate=0.3,name="dropout")(head)
+    #head = tf.keras.layers.Flatten(name="head_flatten")(base_model.output)  # (head)
+    head = tf.keras.layers.Dropout(rate=0.5,name="dropout")(head)
     head = tf.keras.layers.Dense(64,
                                  activation=None,
+                                 kernel_initializer="he_uniform",
                                  kernel_regularizer=tf.keras.regularizers.l2(
-                                     l=3e-3),
+                                     l=5e-4),
                                  bias_regularizer=tf.keras.regularizers.l2(
-                                     l=3e-3),
+                                     l=5e-4),
                                  name="head_dense_1")(head)
     head = tf.keras.layers.BatchNormalization(name="batch_norm")(head)
     head = tf.keras.layers.Activation(activation="relu")(head)
@@ -72,8 +73,25 @@ def resnet50(input_shape, transfer_learning=True):
     #    pool_size=7, name="head_maxpool2D")(base_model.output)
     head = tf.keras.layers.GlobalAveragePooling2D(
         name="avg_pool")(base_model.output)
-    head = tf.keras.layers.Flatten(name="head_flatten")(head)
-    head = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
+    #head = tf.keras.layers.Flatten(name="head_flatten")(head)
+    #head = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
+    
+    head = tf.keras.layers.Dropout(rate=0.5,name="dropout")(head)
+    head = tf.keras.layers.Dense(64,
+                                 activation=None,
+                                 kernel_regularizer=tf.keras.regularizers.l2(
+                                     l=5e-5),
+                                 bias_regularizer=tf.keras.regularizers.l2(
+                                     l=5e-5),
+                                 name="head_dense_1")(head)
+    #head = tf.keras.layers.BatchNormalization(name="batch_norm")(head)
+    head = tf.keras.layers.Activation(activation="relu")(head)
+
+    head = tf.keras.layers.Dense(1,
+                                 activation='sigmoid',
+                                 #  kernel_regularizer=tf.keras.regularizers.l2(l=3e-3),
+                                 #  bias_regularizer=tf.keras.regularizers.l2(l=3e-3),
+                                 name='target')(head)
 
     return tf.keras.Model(inputs=base_model.input, outputs=head)
 
