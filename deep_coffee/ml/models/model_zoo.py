@@ -1,4 +1,4 @@
-from deep_coffee.ml.models.coffee_net import coffee_net_v1
+from deep_coffee.ml.models.coffee_net import coffee_net_v1, coffee_net_v2
 import sys
 
 import tensorflow as tf
@@ -101,6 +101,7 @@ MODEL_ZOO = {
     "resnet50": resnet50,
     "vgg16": vgg16,
     "coffee_net_v1": coffee_net_v1,
+    "coffee_net_v2": coffee_net_v2,
 }
 
 

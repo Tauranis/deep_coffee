@@ -1,0 +1,15 @@
+tfrecord_train: /dataset/tfrecords/train*
+tfrecord_eval: /dataset/tfrecords/eval*
+tfrecord_test: /dataset/tfrecords/test*
+network_name: coffee_net_v2
+learning_rate : 0.0005
+batch_size: 64
+epochs: 500
+transfer_learning: false # train conv layers
+#grad_cam_layers:
+#  - Conv1_1
+#  - Conv1_2
+#  - Conv1_3
+#  - Conv1_4
+#  - Conv1_5
+
