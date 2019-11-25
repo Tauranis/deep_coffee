@@ -33,22 +33,31 @@ logger.setLevel(logging.INFO)
 CLASS_ID_BAD_BEAN = 0
 CLASS_ID_GOOD_BEAN = 1
 
+CLASS_ID_TO_NAME = {
+    CLASS_ID_BAD_BEAN: "bad",
+    CLASS_ID_GOOD_BEAN: "good"
+}
+
 
 def _preprocess_fn(features, new_shape):
 
     def __preprocess_image(_image_bytes):
         __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
-        __image_tensor = tf.image.convert_image_dtype(
-            tf.image.resize(__image_tensor, size=new_shape)/255.0, dtype=tf.uint8)
-        __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=95)
+        # __image_tensor = tf.image.convert_image_dtype(
+        #     tf.image.resize(__image_tensor, size=new_shape)/255.0, dtype=tf.uint8)
+        __image_tensor = tf.cast(tf.round(tf.image.resize(
+            __image_tensor, size=new_shape)), dtype=tf.uint8)
+        __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=100)
         return __image_tensor
 
     _image_tensor = tf.map_fn(
         __preprocess_image, features['image_bytes'], dtype=tf.string)
 
     _output_features = {
-        "image_preprocessed": _image_tensor,
-        "target": features["target"]
+        "image_bytes": _image_tensor,
+        "target": features["target"],
+        "filename": features["filename"],
+        "target_name": features["target_name"]
     }
 
     return _output_features
@@ -58,7 +67,9 @@ def _get_feature_spec():
 
     _schema_dict = {
         'image_bytes': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
-        'target': tf.io.FixedLenFeature(shape=[], dtype=tf.float32, default_value=None)
+        'target': tf.io.FixedLenFeature(shape=[], dtype=tf.float32, default_value=None),
+        'filename': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
+        'target_name': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
     }
 
     schema = dataset_metadata.DatasetMetadata(
@@ -74,12 +85,15 @@ class ReadImageDoFn(beam.DoFn):
     def process(self, element):
         filename = element[0]
         target = element[1]
+        basename = filename.split("/")[-1]
 
         image_bytes = tf.io.gfile.GFile(filename, mode='rb').read()
 
         yield {
             'image_bytes': image_bytes,
-            'target': target
+            'target': target,
+            'filename': basename,
+            'target_name': CLASS_ID_TO_NAME[target]
         }
 
 
@@ -109,18 +123,18 @@ if __name__ == '__main__':
     known_args, pipeline_args = parser.parse_known_args()
 
     good_beans_list_train = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_train).read().split("\n")[:-1]]
+        known_args.good_beans_list_train).read().split("\n")]
     good_beans_list_eval = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_eval).read().split("\n")[:-1]]
+        known_args.good_beans_list_eval).read().split("\n")]
     good_beans_list_test = [(os.path.join(known_args.good_beans_dir, f), CLASS_ID_GOOD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.good_beans_list_test).read().split("\n")[:-1] ]
+        known_args.good_beans_list_test).read().split("\n")]
 
     bad_beans_list_train = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_train).read().split("\n")[:-1]]
+        known_args.bad_beans_list_train).read().split("\n")]
     bad_beans_list_eval = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_eval).read().split("\n")[:-1]]
+        known_args.bad_beans_list_eval).read().split("\n")]
     bad_beans_list_test = [(os.path.join(known_args.bad_beans_dir, f), CLASS_ID_BAD_BEAN) for f in tf.io.gfile.GFile(
-        known_args.bad_beans_list_test).read().split("\n")[:-1]]
+        known_args.bad_beans_list_test).read().split("\n")]
 
     list_train = good_beans_list_train + bad_beans_list_train
     list_eval = good_beans_list_eval + bad_beans_list_eval
@@ -129,14 +143,6 @@ if __name__ == '__main__':
     train_tfrecord_path = os.path.join(known_args.output_dir, 'train')
     eval_tfrecord_path = os.path.join(known_args.output_dir, 'eval')
     test_tfrecord_path = os.path.join(known_args.output_dir, 'test')
-
-    #logger.info(list_train)
-    #logger.info(list_eval)
-    #logger.info(list_test)
-
-    #print(list_train[:10])
-    #import sys
-    #sys.exit(0)
 
     pipeline_options = PipelineOptions(flags=pipeline_args)
     pipeline_options.view_as(DirectOptions).direct_num_workers = 1 if (

@@ -2,12 +2,12 @@ tfrecord_train: /dataset/tfrecords/train*
 tfrecord_eval: /dataset/tfrecords/eval*
 tfrecord_test: /dataset/tfrecords/test*
 network_name: vgg16
-learning_rate : 0.0005
-batch_size: 32
-epochs: 5
-transfer_learning: false # train conv layers
-grad_cam_layers:
-  - block1_conv2
-  - block2_conv2
-  - block3_conv2
-  - block4_conv2
+learning_rate : 0.005
+batch_size: 16
+epochs: 20
+transfer_learning: true # train conv layers
+# grad_cam_layers:
+#   - block1_conv2
+#   - block2_conv2
+#   - block3_conv2
+#   - block4_conv2

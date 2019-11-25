@@ -1,7 +1,8 @@
-from deep_coffee.ml.models.coffee_net import coffee_net_v1, coffee_net_v2
+from deep_coffee.ml.models.coffee_net import coffee_net_v1
 import sys
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 import logging
 logging.basicConfig()
@@ -9,91 +10,38 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def mobilenet(input_shape, transfer_learning=True):
-    base_model = tf.keras.applications.MobileNet(
-        include_top=False, input_shape=input_shape)
-    base_model.trainable = not transfer_learning
+def model_head(input_shape, backend_model, transfer_learning=True):
 
-    # head = tf.keras.layers.MaxPooling2D(
-    #    pool_size=7, name="head_maxpool2D")(base_model.output)
-    # head = tf.keras.layers.GlobalAveragePooling2D(name="avg_pool")(base_model.output)
-    head = tf.keras.layers.GlobalMaxPool2D(name="avg_pool")(base_model.output)
-    #head = tf.keras.layers.Flatten(name="head_flatten")(base_model.output)  # (head)
-    head = tf.keras.layers.Dropout(rate=0.5,name="dropout")(head)
-    head = tf.keras.layers.Dense(64,
-                                 activation=None,
-                                 kernel_initializer="he_uniform",
-                                 kernel_regularizer=tf.keras.regularizers.l2(
-                                     l=5e-4),
-                                 bias_regularizer=tf.keras.regularizers.l2(
-                                     l=5e-4),
-                                 name="head_dense_1")(head)
-    head = tf.keras.layers.BatchNormalization(name="batch_norm")(head)
+    reg_val = 5e-4
+
+    # K.set_learning_phase(0)
+    base_model = backend_model(
+        include_top=True, input_shape=tuple(input_shape),layers=tf.keras.layers)
+    base_model.trainable = not transfer_learning
+    # K.set_learning_phase(1)
+    head = tf.keras.layers.Dropout(0.5,name="dropout_head")(base_model.output)
+    head = tf.keras.layers.Dense(
+        64, activation=None, kernel_regularizer=tf.keras.regularizers.l2(l=reg_val))(head)
+    head = tf.keras.layers.BatchNormalization()(head)
     head = tf.keras.layers.Activation(activation="relu")(head)
-    # head = tf.keras.layers.Dense(2,
-    #                              activation='softmax',
-    #                              kernel_regularizer=tf.keras.regularizers.l2(l=3e-3),
-    #                              bias_regularizer=tf.keras.regularizers.l2(l=3e-3),
-    #                              name='target')(head)
+
     head = tf.keras.layers.Dense(1,
                                  activation='sigmoid',
-                                 #  kernel_regularizer=tf.keras.regularizers.l2(l=3e-3),
-                                 #  bias_regularizer=tf.keras.regularizers.l2(l=3e-3),
                                  name='target')(head)
 
     return tf.keras.Model(inputs=base_model.input, outputs=head)
+
+
+def mobilenet(input_shape, transfer_learning=True):
+    return model_head(input_shape, tf.keras.applications.MobileNet, transfer_learning)
 
 
 def vgg16(input_shape, transfer_learning=True):
-    base_model = tf.keras.applications.VGG16(
-        include_top=False, input_shape=input_shape)
-    base_model.trainable = not transfer_learning
-
-    head = tf.keras.layers.MaxPooling2D(
-        pool_size=7, name="head_maxpool2D")(base_model.output)
-    head = tf.keras.layers.Flatten(name="head_flatten")(head)
-    head = tf.keras.layers.Dense(64,
-                                 activation='relu',
-                                 kernel_regularizer=tf.keras.regularizers.L1L2(
-                                     l1=1e-5, l2=1e-5),
-                                 bias_regularizer=tf.keras.regularizers.L1L2(
-                                     l1=1e-5, l2=1e-5),
-                                 name="head_dense_1")(head)
-    head = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
-
-    return tf.keras.Model(inputs=base_model.input, outputs=head)
+    return model_head(input_shape, tf.keras.applications.VGG16, transfer_learning)
 
 
 def resnet50(input_shape, transfer_learning=True):
-    base_model = tf.keras.applications.ResNet50(
-        include_top=False, input_shape=input_shape)
-    base_model.trainable = not transfer_learning
-
-    # head = tf.keras.layers.MaxPooling2D(
-    #    pool_size=7, name="head_maxpool2D")(base_model.output)
-    head = tf.keras.layers.GlobalAveragePooling2D(
-        name="avg_pool")(base_model.output)
-    #head = tf.keras.layers.Flatten(name="head_flatten")(head)
-    #head = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
-    
-    head = tf.keras.layers.Dropout(rate=0.5,name="dropout")(head)
-    head = tf.keras.layers.Dense(64,
-                                 activation=None,
-                                 kernel_regularizer=tf.keras.regularizers.l2(
-                                     l=5e-5),
-                                 bias_regularizer=tf.keras.regularizers.l2(
-                                     l=5e-5),
-                                 name="head_dense_1")(head)
-    #head = tf.keras.layers.BatchNormalization(name="batch_norm")(head)
-    head = tf.keras.layers.Activation(activation="relu")(head)
-
-    head = tf.keras.layers.Dense(1,
-                                 activation='sigmoid',
-                                 #  kernel_regularizer=tf.keras.regularizers.l2(l=3e-3),
-                                 #  bias_regularizer=tf.keras.regularizers.l2(l=3e-3),
-                                 name='target')(head)
-
-    return tf.keras.Model(inputs=base_model.input, outputs=head)
+    return model_head(input_shape, tf.keras.applications.ResNet50, transfer_learning)
 
 
 MODEL_ZOO = {
@@ -101,7 +49,6 @@ MODEL_ZOO = {
     "resnet50": resnet50,
     "vgg16": vgg16,
     "coffee_net_v1": coffee_net_v1,
-    "coffee_net_v2": coffee_net_v2,
 }
 
 

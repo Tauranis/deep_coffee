@@ -12,7 +12,7 @@ import os
 import datetime
 import numpy as np
 
-#tf.compat.v1.disable_eager_execution()
+# tf.compat.v1.disable_eager_execution()
 
 import multiprocessing
 N_CORES = multiprocessing.cpu_count()
@@ -42,17 +42,18 @@ def input_fn(tfrecords_path,
         X = {}
         Y = {}
 
-        image_tensor = tf.io.decode_jpeg(
-            example["image_preprocessed"], channels=3)
+        image_tensor = tf.image.decode_jpeg(
+            example["image_bytes"], channels=3)
         image_tensor = tf.reshape(image_tensor, image_shape)
         image_tensor = tf.dtypes.cast(image_tensor, tf.float32)
-        X["input_1"] = preproc_fn(image_tensor)
+        # X["input_1"] = preproc_fn(image_tensor)
+        X["input_1"] = image_tensor/255.0
         Y["target"] = example["target"]
 
         return X, Y
 
-    num_parallel_calls = None # N_CORES-1
-    #if num_parallel_calls <= 0:
+    num_parallel_calls = None  # N_CORES-1
+    # if num_parallel_calls <= 0:
     #    num_parallel_calls = 1
 
     dataset = tf.data.TFRecordDataset(tfrecords_path, compression_type="")
@@ -61,7 +62,7 @@ def input_fn(tfrecords_path,
     dataset = dataset.map(_split_XY, num_parallel_calls=num_parallel_calls)
     #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     dataset = dataset.batch(batch_size)
-    #dataset = dataset.prefetch(1) #tf.data.experimental.AUTOTUNE)
+    # dataset = dataset.prefetch(1) #tf.data.experimental.AUTOTUNE)
 
     if shuffle:
         dataset = dataset.shuffle(buffer_size=batch_size * 3)
@@ -83,6 +84,9 @@ if __name__ == "__main__":
     parser.add_argument("--testset_len", required=True, type=int)
     parser.add_argument("--config_file", required=True)
     args = parser.parse_args()
+
+    temp = tf.random.uniform([4, 32, 32, 3])  # Or tf.zeros
+    tf.keras.applications.vgg16.preprocess_input(temp)
 
     input_shape = [args.input_dim, args.input_dim, 3]
 
@@ -106,14 +110,16 @@ if __name__ == "__main__":
         config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
     logger.info(model.summary())
 
-    #model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
-                  # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
-    model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
-                  #   loss="sparse_categorical_crossentropy",
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
+    # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
+    # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
+                    # loss="sparse_categorical_crossentropy",
                   loss="binary_crossentropy",
-                  metrics=[tf.keras.metrics.Precision(
-                      name="Precision", thresholds=[0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]),
-        tf.keras.metrics.AUC(num_thresholds=20)])
+                  metrics=["acc",
+                           tf.keras.metrics.AUC(num_thresholds=20),
+                           tf.keras.metrics.Precision(thresholds=[0.1,0.25,0.5,0.75,0.9]),
+                           tf.keras.metrics.Recall(thresholds=[0.1,0.25,0.5,0.75,0.9])
+                           ])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
     steps_per_epoch_eval = args.evalset_len // config["batch_size"]
@@ -131,7 +137,7 @@ if __name__ == "__main__":
                                                             monitor="val_loss",
                                                             save_best_only=True,
                                                             save_freq="epoch")
-    #callback_list.append(callback_save_ckpt)
+    # callback_list.append(callback_save_ckpt)
 
     callback_tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_dir,
                                                           histogram_freq=10,
@@ -144,7 +150,7 @@ if __name__ == "__main__":
     callback_early_stop = tf.keras.callbacks.EarlyStopping(monitor="val_loss",
                                                            min_delta=5e-3,
                                                            patience=10)
-    callback_list.append(callback_early_stop)
+    # callback_list.append(callback_early_stop)
 
     callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
                                                                           tft_metadata,
@@ -227,10 +233,10 @@ if __name__ == "__main__":
               validation_steps=steps_per_epoch_eval,
               epochs=config["epochs"],
               callbacks=callback_list,
-              #callbacks=None,
+            #   callbacks=None,
               class_weight={  # TODO: parameterize
-                  0: 1.862,
-                  1: 0.683
+                  0: 2.12,
+                  1: 0.65
     })
 
     # train_spec = tf.estimator.TrainSpec(

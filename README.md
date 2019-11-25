@@ -122,9 +122,23 @@ python -m deep_coffee.ml.images_to_tfrecords \
 --bad_beans_list_eval /dataset/protocol/bad_eval.txt \
 --bad_beans_list_test /dataset/protocol/bad_test.txt \
 --image_dim 224 \
---n_shards 20 \
+--n_shards 10 \
 --ext jpg \
 --temp-dir /tmp
+```
+
+### Decode dataset from tfrecords to images (just for testing)
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+-v ${PWD}/trained_models:/trained_models \
+-v ${PWD}/deep_coffee:/src/deep_coffee \
+-v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.ml.decode_tfrecord_dataset \
+--tfrecord_file "/dataset/tfrecords/train*" \
+--output_dir /dataset/decoded_tfrecords \
+--tft_artifacts_dir /dataset/tft_artifacts
 ```
 
 ### Train network
@@ -144,9 +158,9 @@ python -m deep_coffee.ml.train_and_evaluate \
 --output_dir /trained_models \
 --tft_artifacts_dir /dataset/tft_artifacts \
 --input_dim 224 \
---trainset_len 13060 \
---evalset_len 2777 \
---testset_len 2679 \
+--trainset_len 1265 \
+--evalset_len 264 \
+--testset_len 278 \
 --config_file /app/deep_coffee/ml/config/mobilenet.yml
 ```
 
