@@ -31,14 +31,9 @@ class CustomRecall(tf.keras.metrics.Metric):
         initializer=init_ops.zeros_initializer)
 
   def update_state(self, y_true, y_pred, sample_weight=None):    
-    
-    import sys
-    print(y_pred)
-    print(y_pred.shape)
-    print("\n\n\n\n\n DDDDDDDDDDD \n\n\n\n")
-    sys.exit(0)
+        
 
-    return metrics_utils.update_confusion_matrix_variables(
+    metrics_utils.update_confusion_matrix_variables(
         {
             metrics_utils.ConfusionMatrix.TRUE_POSITIVES: self.true_positives,
             metrics_utils.ConfusionMatrix.FALSE_NEGATIVES: self.false_negatives
@@ -51,9 +46,9 @@ class CustomRecall(tf.keras.metrics.Metric):
   def result(self):
     result = math_ops.div_no_nan(self.true_positives,
                                  self.true_positives + self.false_negatives)
-    return result[0] if len(self.thresholds) == 1 else result
+    return result[0] if len(self.threshold) == 1 else result
 
   def reset_states(self):
-    num_thresholds = len(to_list(self.thresholds))
+    num_thresholds = len(to_list(self.threshold))
     K.batch_set_value(
         [(v, np.zeros((num_thresholds,))) for v in self.variables])

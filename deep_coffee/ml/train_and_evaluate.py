@@ -117,7 +117,7 @@ if __name__ == "__main__":
                   loss="sparse_categorical_crossentropy",
                   #   loss="binary_crossentropy",
                   metrics=["acc",
-                  CustomRecall(threshold=0.5,class_id=1,name="Recall_at_05")
+                    #   CustomRecall(threshold=0.5,class_id=1,name="Recall_at_05")
                            #    tf.keras.metrics.AUC(num_thresholds=20),
                            #    tf.keras.metrics.Precision(
                            #        thresholds=[0.1, 0.25, 0.5, 0.75, 0.9], class_id=1),
