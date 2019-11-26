@@ -161,6 +161,8 @@ python -m deep_coffee.ml.train_and_evaluate \
 --trainset_len 1265 \
 --evalset_len 264 \
 --testset_len 278 \
---config_file /app/deep_coffee/ml/config/mobilenet.yml
+--config_file /app/deep_coffee/ml/config/mobilenet.yml \
+--learning_rate 0.0001 \
+--batch_size 8
 ```
 

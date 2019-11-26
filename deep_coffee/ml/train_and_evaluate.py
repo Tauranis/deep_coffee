@@ -84,14 +84,23 @@ if __name__ == "__main__":
     parser.add_argument("--evalset_len", required=True, type=int)
     parser.add_argument("--testset_len", required=True, type=int)
     parser.add_argument("--config_file", required=True)
+    parser.add_argument("--learning_rate", required=False, type=float, default=None)
+    parser.add_argument("--batch_size", required=False,type=int, default=None)
     args = parser.parse_args()
 
-    temp = tf.random.uniform([4, 32, 32, 3])  # Or tf.zeros
+    temp = tf.random.uniform([4, 32, 32, 3])
     tf.keras.applications.vgg16.preprocess_input(temp)
+    
 
+    # Set input dimension
     input_shape = [args.input_dim, args.input_dim, 3]
-
+    
+    # Parse config file
     config = yaml.load(tf.io.gfile.GFile(args.config_file).read())
+
+    # Set learning rate and batch size
+    learning_rate = args.learning_rate if args.learning_rate is not None else config["learning_rate"]
+    batch_size = args.batch_size if args.batch_size is not None else config["batch_size"]
 
     logger.info("Load tfrecords...")
     tfrecords_train = list_tfrecords(config["tfrecord_train"])
@@ -111,9 +120,9 @@ if __name__ == "__main__":
         config["network_name"], input_shape=input_shape, transfer_learning=config["transfer_learning"])
     logger.info(model.summary())
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
-                  # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
-                  # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+                  # model.compile(optimizer=tf.keras.optimizers.SGD(lr=learning_rate,momentum=0.9),
+                  # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=learning_rate),
                   loss="sparse_categorical_crossentropy",
                   #   loss="binary_crossentropy",
                   metrics=["acc",
@@ -124,9 +133,9 @@ if __name__ == "__main__":
                            #    tf.keras.metrics.Recall(thresholds=[0.1,0.25,0.5,0.75,0.9])
                            ])
 
-    steps_per_epoch_train = args.trainset_len // config["batch_size"]
-    steps_per_epoch_eval = args.evalset_len // config["batch_size"]
-    steps_per_epoch_test = args.testset_len // config["batch_size"]
+    steps_per_epoch_train = args.trainset_len // batch_size
+    steps_per_epoch_eval = args.evalset_len // batch_size
+    steps_per_epoch_test = args.testset_len // batch_size
 
     datetime_now_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = os.path.join(
@@ -160,7 +169,7 @@ if __name__ == "__main__":
                                                                           preproc_fn=preproc_fn,
                                                                           image_shape=input_shape,
                                                                           dataset_len=args.evalset_len,
-                                                                          batch_size=config["batch_size"],
+                                                                          batch_size=batch_size,
                                                                           shuffle=False,
                                                                           repeat=False),
                                                    class_names=[
@@ -175,7 +184,7 @@ if __name__ == "__main__":
                                                                     preproc_fn=preproc_fn,
                                                                     image_shape=input_shape,
                                                                     dataset_len=args.evalset_len,
-                                                                    batch_size=config["batch_size"],
+                                                                    batch_size=batch_size,
                                                                     shuffle=False,
                                                                     repeat=False),
                                              logdir=tensorboard_dir,
@@ -229,7 +238,7 @@ if __name__ == "__main__":
                          tft_metadata=tft_metadata,
                          preproc_fn=preproc_fn,
                          image_shape=input_shape,
-                         batch_size=config["batch_size"],
+                         batch_size=batch_size,
                          dataset_len=args.trainset_len,
                          shuffle=True,
                          repeat=True),
@@ -237,7 +246,7 @@ if __name__ == "__main__":
                                        tft_metadata=tft_metadata,
                                        preproc_fn=preproc_fn,
                                        image_shape=input_shape,
-                                       batch_size=config["batch_size"],
+                                       batch_size=batch_size,
                                        dataset_len=args.evalset_len,
                                        shuffle=False,
                                        repeat=False),
@@ -255,14 +264,14 @@ if __name__ == "__main__":
     #     input_fn=lambda: input_fn(tfrecords_train,
     #                               tft_metadata,
     #                               input_shape,
-    #                               config["batch_size"]))
+    #                               args.batch_size))
     # # max_steps=steps_per_epoch_train*args.epochs)
 
     # eval_spec = tf.estimator.EvalSpec(
     #     input_fn=lambda: input_fn(tfrecords_eval,
     #                               tft_metadata,
     #                               input_shape,
-    #                               config["batch_size"]))
+    #                               args.batch_size))
     # # steps=steps_per_epoch_eval*args.epochs)
 
     # run_config = tf.estimator.RunConfig(
