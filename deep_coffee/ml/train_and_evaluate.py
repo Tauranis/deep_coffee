@@ -203,8 +203,8 @@ if __name__ == "__main__":
             grad_cam_x = []
             _buff_size = 0
 
-            for grad_cam_sample_x, grad_cam_sample_y,_ in grad_cam_sample:
-                grad_cam_sample_x = grad_cam_sample_x["input_1"].numpy()
+            for grad_cam_sample_x, grad_cam_sample_y, _ in grad_cam_sample:
+                grad_cam_sample_x = grad_cam_sample_x["input_tensor"].numpy()
                 grad_cam_sample_y = np.array([
                     int(v) for v in grad_cam_sample_y["target"].numpy()])
                 class_index_i = np.where(grad_cam_sample_y == class_index)[0]
@@ -216,7 +216,7 @@ if __name__ == "__main__":
             grad_cam_x = np.concatenate(grad_cam_x, axis=0)[
                 :GRAD_CAM_GRID_SIZE]
 
-            for grad_cam_layer in config["grad_cam_layers"]:
+            for grad_cam_layer in config["grad_cam_layers"]:                
                 callback_grad_cam = GradCAMCallback(
                     validation_data=(grad_cam_x, None),
                     layer_name=grad_cam_layer,
@@ -224,8 +224,9 @@ if __name__ == "__main__":
                     output_dir=os.path.join(
                         tensorboard_dir, "grad_cam", grad_cam_layer, "class_{}".format(class_index)),
                 )
-                callback_list.append(callback_grad_cam)
+                callback_list.append(callback_grad_cam)                
     except KeyError:
+        
         pass
 
     model.fit(x=input_fn(tfrecords_path=tfrecords_train,

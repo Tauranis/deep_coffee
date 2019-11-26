@@ -63,7 +63,7 @@ def coffee_net_v1(input_shape, transfer_learning=False):
 
         return _max_pool
 
-    input_tensor = tf.keras.layers.Input(shape=input_shape, name="input_1")
+    input_tensor = tf.keras.layers.Input(shape=input_shape, name="input_tensor")
 
     block_1 = _coffee_block(input_tensor, n_filters=32,
                             block_name="1", activation=None)
