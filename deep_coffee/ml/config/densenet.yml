@@ -1,7 +1,7 @@
 tfrecord_train: /dataset/tfrecords/train*
 tfrecord_eval: /dataset/tfrecords/eval*
 tfrecord_test: /dataset/tfrecords/test*
-network_name: resnet50
+network_name: densenet
 learning_rate : 0.0001
 batch_size: 32
 epochs: 50

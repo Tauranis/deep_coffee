@@ -2,23 +2,18 @@
 import logging
 from deep_coffee.ml.models import model_zoo, preproc_zoo
 from deep_coffee.ml.utils import list_tfrecords, PlotConfusionMatrixCallback, PlotROCCurveCallback
+from deep_coffee.ml.custom_metrics import CustomRecall
+
+import tensorflow as tf
 from tensorflow_transform import TFTransformOutput
 from tensorflow_transform.beam.tft_beam_io import transform_fn_io
 from tf_explain.callbacks.grad_cam import GradCAMCallback
-import tensorflow as tf
+
 import argparse
 import yaml
 import os
 import datetime
 import numpy as np
-
-# from tensorflow.keras import backend as K
-# K.set_floatx('float64')
-
-# tf.compat.v1.disable_eager_execution()
-
-import multiprocessing
-N_CORES = multiprocessing.cpu_count()
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -122,6 +117,7 @@ if __name__ == "__main__":
                   loss="sparse_categorical_crossentropy",
                   #   loss="binary_crossentropy",
                   metrics=["acc",
+                  CustomRecall(threshold=0.5,class_id=1,name="Recall_at_05")
                            #    tf.keras.metrics.AUC(num_thresholds=20),
                            #    tf.keras.metrics.Precision(
                            #        thresholds=[0.1, 0.25, 0.5, 0.75, 0.9], class_id=1),

@@ -65,7 +65,7 @@ class CropBeans_CV(object):
             if (((bean_image.shape[0] > bean_image.shape[1]) and (bean_image.shape[0]/bean_image.shape[1] > 2))
                     or ((bean_image.shape[1] > bean_image.shape[0]) and (bean_image.shape[1]/bean_image.shape[0] > 2))):
                 continue
-            
+
             # pad image to be square
             pad_size = 0
             if bean_image.shape[0] < bean_image.shape[1]:

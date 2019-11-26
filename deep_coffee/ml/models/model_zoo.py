@@ -32,6 +32,10 @@ def model_head(input_shape, backend_model, transfer_learning=True):
     return tf.keras.Model(inputs=base_model.input, outputs=head)
 
 
+def densenet(input_shape, transfer_learning=True):
+    return model_head(input_shape, tf.keras.applications.Densenet121, transfer_learning)
+
+
 def mobilenet(input_shape, transfer_learning=True):
     return model_head(input_shape, tf.keras.applications.MobileNet, transfer_learning)
 
@@ -44,10 +48,16 @@ def resnet50(input_shape, transfer_learning=True):
     return model_head(input_shape, tf.keras.applications.ResNet50, transfer_learning)
 
 
+def inception_v3(input_shape, transfer_learning=True):
+    return model_head(input_shape, tf.keras.applications.InceptionV3, transfer_learning)
+
+
 MODEL_ZOO = {
     "mobilenet": mobilenet,
     "resnet50": resnet50,
     "vgg16": vgg16,
+    "densenet": densenet,
+    "inception_v3": inception_v3,
     "coffee_net_v1": coffee_net_v1,
 }
 
