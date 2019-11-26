@@ -1,7 +1,4 @@
 FROM tensorflow/tensorflow:2.0.0-gpu-py3
-#FROM tensorflow/tensorflow:latest-gpu-py3
-# FROM tensorflow/tensorflow:2.0.0-py3
-
 # General dependencies
 RUN apt-get update && apt-get install -y
 

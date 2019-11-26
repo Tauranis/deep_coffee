@@ -39,12 +39,17 @@ CLASS_ID_TO_NAME = {
 }
 
 
+# Due to https://github.com/tensorflow/tensorflow/issues/33550 we must store the class weight on tfrecord
+CLASS_ID_TO_WEIGHT = { 
+    CLASS_ID_BAD_BEAN: 2.12,
+    CLASS_ID_GOOD_BEAN: 0.65,
+}
+
+
 def _preprocess_fn(features, new_shape):
 
     def __preprocess_image(_image_bytes):
-        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)
-        # __image_tensor = tf.image.convert_image_dtype(
-        #     tf.image.resize(__image_tensor, size=new_shape)/255.0, dtype=tf.uint8)
+        __image_tensor = tf.io.decode_jpeg(_image_bytes, channels=3)        
         __image_tensor = tf.cast(tf.round(tf.image.resize(
             __image_tensor, size=new_shape)), dtype=tf.uint8)
         __image_tensor = tf.io.encode_jpeg(__image_tensor, quality=100)
@@ -56,6 +61,7 @@ def _preprocess_fn(features, new_shape):
     _output_features = {
         "image_bytes": _image_tensor,
         "target": features["target"],
+        "sample_weight": features["sample_weight"],
         "filename": features["filename"],
         "target_name": features["target_name"]
     }
@@ -68,6 +74,7 @@ def _get_feature_spec():
     _schema_dict = {
         'image_bytes': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
         'target': tf.io.FixedLenFeature(shape=[], dtype=tf.float32, default_value=None),
+        'sample_weight': tf.io.FixedLenFeature(shape=[], dtype=tf.float32, default_value=None),
         'filename': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
         'target_name': tf.io.FixedLenFeature(shape=[], dtype=tf.string, default_value=None),
     }
@@ -85,6 +92,7 @@ class ReadImageDoFn(beam.DoFn):
     def process(self, element):
         filename = element[0]
         target = element[1]
+        sample_weight = CLASS_ID_TO_WEIGHT[target]
         basename = filename.split("/")[-1]
 
         image_bytes = tf.io.gfile.GFile(filename, mode='rb').read()
@@ -93,6 +101,7 @@ class ReadImageDoFn(beam.DoFn):
             'image_bytes': image_bytes,
             'target': target,
             'filename': basename,
+            'sample_weight':sample_weight,
             'target_name': CLASS_ID_TO_NAME[target]
         }
 

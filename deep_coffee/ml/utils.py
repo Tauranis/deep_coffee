@@ -6,6 +6,7 @@ import itertools
 import io
 import os
 from sklearn.metrics import confusion_matrix, roc_curve, auc
+import scipy.stats as stats
 
 
 import matplotlib as mpl
@@ -13,7 +14,6 @@ mpl.use('Agg')
 
 
 def list_tfrecords(path_regex):
-    # tf.compat.v1.enable_eager_execution()
 
     return [f.numpy().decode('utf-8') for f in tf.data.Dataset.list_files(path_regex)]
 
@@ -36,8 +36,10 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
                 X = data_dict[0]
                 Y = data_dict[1]['target'].numpy().tolist()
 
+                # Y_pred = np.squeeze(
+                #     np.array(self.model.predict_on_batch(X))).tolist()
                 Y_pred = np.squeeze(
-                    np.array(self.model.predict_on_batch(X))).tolist()
+                    np.array(self.model.predict_on_batch(X)))[:, 1].tolist()  # https://github.com/keras-team/keras/issues/13118
 
                 Y_list += Y
                 Y_pred_list += Y_pred
@@ -46,6 +48,10 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
 
             fpr, tpr, _ = roc_curve(Y_arr, Y_pred_arr)
             roc_auc = auc(fpr, tpr)
+
+            # Summary auc
+            with self.summary_image_writer.as_default():
+                tf.summary.scalar("AUC", roc_auc, step=epoch)
 
             figure = plt.figure(figsize=(5, 5))
             plt.plot(fpr, tpr, color='darkorange', lw=2,
@@ -83,9 +89,11 @@ class PlotROCCurveCallback(tf.keras.callbacks.Callback):
             Y_pred_neg_arr = Y_pred_arr[Y_neg_i]
 
             sns.distplot(Y_pred_pos_arr, color="skyblue",
-                         label="Good Beans", norm_hist=True)
+                         label="Good Beans", norm_hist=True,kde=True,bins=15)
             sns.distplot(Y_pred_neg_arr, color="red",
-                         label="Bad Beans", norm_hist=True)
+                         label="Bad Beans", norm_hist=True,kde=True,bins=15)
+
+
             plt.xlim(0, 1)
             plt.legend()
 
@@ -123,8 +131,9 @@ class PlotConfusionMatrixCallback(tf.keras.callbacks.Callback):
         for i, data_dict in enumerate(self.eval_input_fn):
             X = data_dict[0]
             Y = data_dict[1]['target'].numpy().tolist()
-            
-            Y_pred = np.array(self.model.predict_on_batch(X)).tolist()
+
+            Y_pred = np.array(self.model.predict_on_batch(X))[:, 1].tolist()
+            # Y_pred = np.array(self.model.predict_on_batch(X)).tolist()
 
             Y_list += Y
             Y_pred_list += Y_pred

@@ -10,8 +10,8 @@ logger.setLevel(logging.INFO)
 
 PREPROC_FN_ZOO = {
     "mobilenet": tf.keras.applications.mobilenet.preprocess_input,
-    "vgg16": tf.keras.applications.vgg16.preprocess_input, # OBS: tf.keras.applications.vgg16.preprocess_input doesn't work
-    "resnet50": tf.keras.applications.mobilenet.preprocess_input, # OBS: tf.keras.applications.vgg16.preprocess_input doesn't work
+    "vgg16": tf.keras.applications.vgg16.preprocess_input, # https://github.com/tensorflow/tensorflow/issues/29931
+    "resnet50": tf.keras.applications.mobilenet.preprocess_input, # https://github.com/tensorflow/tensorflow/issues/29931
     "coffee_net_v1": tf.keras.applications.mobilenet.preprocess_input,
 }
 

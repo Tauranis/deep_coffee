@@ -12,6 +12,9 @@ import os
 import datetime
 import numpy as np
 
+# from tensorflow.keras import backend as K
+# K.set_floatx('float64')
+
 # tf.compat.v1.disable_eager_execution()
 
 import multiprocessing
@@ -28,9 +31,10 @@ def input_fn(tfrecords_path,
              tft_metadata,
              preproc_fn,
              image_shape,
+             dataset_len,
              batch_size=8,
-             shuffle=True,
-             repeat=True):
+             shuffle=False,
+             repeat=False):
     """ Train input function
         Create and parse dataset from tfrecords shards with TFT schema
     """
@@ -46,29 +50,31 @@ def input_fn(tfrecords_path,
             example["image_bytes"], channels=3)
         image_tensor = tf.reshape(image_tensor, image_shape)
         image_tensor = tf.dtypes.cast(image_tensor, tf.float32)
-        # X["input_1"] = preproc_fn(image_tensor)
-        X["input_1"] = image_tensor/255.0
+        X["input_tensor"] = preproc_fn(image_tensor)
+        X["filename"] = example["filename"]
+
         Y["target"] = example["target"]
+        Y["target_name"] = example["target_name"]
 
-        return X, Y
-
-    num_parallel_calls = None  # N_CORES-1
-    # if num_parallel_calls <= 0:
-    #    num_parallel_calls = 1
+        # return X["input_tensor"], Y["target"], example["sample_weight"]
+        return X, Y, example["sample_weight"]
 
     dataset = tf.data.TFRecordDataset(tfrecords_path, compression_type="")
-    dataset = dataset.map(_parse_example,
-                          num_parallel_calls=num_parallel_calls)
-    dataset = dataset.map(_split_XY, num_parallel_calls=num_parallel_calls)
-    #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-    dataset = dataset.batch(batch_size)
-    # dataset = dataset.prefetch(1) #tf.data.experimental.AUTOTUNE)
 
     if shuffle:
-        dataset = dataset.shuffle(buffer_size=batch_size * 3)
+        dataset = dataset.shuffle(buffer_size=dataset_len)
 
     if repeat:
         dataset = dataset.repeat()
+
+    dataset = dataset.prefetch(dataset_len)
+    dataset = dataset.map(_parse_example,
+                          num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    dataset = dataset.map(
+        _split_XY, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    dataset = dataset.batch(batch_size)
 
     return dataset
 
@@ -111,14 +117,15 @@ if __name__ == "__main__":
     logger.info(model.summary())
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config["learning_rate"]),
-    # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
-    # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
-                    # loss="sparse_categorical_crossentropy",
-                  loss="binary_crossentropy",
+                  # model.compile(optimizer=tf.keras.optimizers.SGD(lr=config["learning_rate"],momentum=0.9),
+                  # model.compile(optimizer=tf.keras.optimizers.RMSprop(learning_rate=config["learning_rate"]),
+                  loss="sparse_categorical_crossentropy",
+                  #   loss="binary_crossentropy",
                   metrics=["acc",
-                           tf.keras.metrics.AUC(num_thresholds=20),
-                           tf.keras.metrics.Precision(thresholds=[0.1,0.25,0.5,0.75,0.9]),
-                           tf.keras.metrics.Recall(thresholds=[0.1,0.25,0.5,0.75,0.9])
+                           #    tf.keras.metrics.AUC(num_thresholds=20),
+                           #    tf.keras.metrics.Precision(
+                           #        thresholds=[0.1, 0.25, 0.5, 0.75, 0.9], class_id=1),
+                           #    tf.keras.metrics.Recall(thresholds=[0.1,0.25,0.5,0.75,0.9])
                            ])
 
     steps_per_epoch_train = args.trainset_len // config["batch_size"]
@@ -152,11 +159,12 @@ if __name__ == "__main__":
                                                            patience=10)
     # callback_list.append(callback_early_stop)
 
-    callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_eval,
-                                                                          tft_metadata,
-                                                                          preproc_fn,
-                                                                          input_shape,
-                                                                          config["batch_size"],
+    callback_plot_cm = PlotConfusionMatrixCallback(eval_input_fn=input_fn(tfrecords_path=tfrecords_eval,
+                                                                          tft_metadata=tft_metadata,
+                                                                          preproc_fn=preproc_fn,
+                                                                          image_shape=input_shape,
+                                                                          dataset_len=args.evalset_len,
+                                                                          batch_size=config["batch_size"],
                                                                           shuffle=False,
                                                                           repeat=False),
                                                    class_names=[
@@ -166,11 +174,12 @@ if __name__ == "__main__":
                                                    logdir=tensorboard_dir)
     callback_list.append(callback_plot_cm)
 
-    callback_plot_roc = PlotROCCurveCallback(eval_input_fn=input_fn(tfrecords_eval,
-                                                                    tft_metadata,
-                                                                    preproc_fn,
-                                                                    input_shape,
-                                                                    config["batch_size"],
+    callback_plot_roc = PlotROCCurveCallback(eval_input_fn=input_fn(tfrecords_path=tfrecords_eval,
+                                                                    tft_metadata=tft_metadata,
+                                                                    preproc_fn=preproc_fn,
+                                                                    image_shape=input_shape,
+                                                                    dataset_len=args.evalset_len,
+                                                                    batch_size=config["batch_size"],
                                                                     shuffle=False,
                                                                     repeat=False),
                                              logdir=tensorboard_dir,
@@ -181,11 +190,12 @@ if __name__ == "__main__":
 
         # Gather 1 Batch for GradCAM callback
         # TODO: https://github.com/sicara/tf-explain/issues/67
-        grad_cam_sample = input_fn(tfrecords_eval,
-                                   tft_metadata,
-                                   preproc_fn,
-                                   input_shape,
-                                   GRAD_CAM_GRID_SIZE*2,
+        grad_cam_sample = input_fn(tfrecords_path=tfrecords_eval,
+                                   tft_metadata=tft_metadata,
+                                   preproc_fn=preproc_fn,
+                                   image_shape=input_shape,
+                                   dataset_len=args.evalset_len,
+                                   batch_size=GRAD_CAM_GRID_SIZE*2,
                                    shuffle=False,
                                    repeat=False)
         for class_index in [0, 1]:
@@ -193,7 +203,7 @@ if __name__ == "__main__":
             grad_cam_x = []
             _buff_size = 0
 
-            for grad_cam_sample_x, grad_cam_sample_y in grad_cam_sample:
+            for grad_cam_sample_x, grad_cam_sample_y,_ in grad_cam_sample:
                 grad_cam_sample_x = grad_cam_sample_x["input_1"].numpy()
                 grad_cam_sample_y = np.array([
                     int(v) for v in grad_cam_sample_y["target"].numpy()])
@@ -222,22 +232,27 @@ if __name__ == "__main__":
                          tft_metadata=tft_metadata,
                          preproc_fn=preproc_fn,
                          image_shape=input_shape,
-                         batch_size=config["batch_size"]),
-              validation_data=input_fn(tfrecords_eval,
-                                       tft_metadata,
-                                       preproc_fn,
-                                       input_shape,
-                                       config["batch_size"],
-                                       shuffle=False),
+                         batch_size=config["batch_size"],
+                         dataset_len=args.trainset_len,
+                         shuffle=True,
+                         repeat=True),
+              validation_data=input_fn(tfrecords_path=tfrecords_eval,
+                                       tft_metadata=tft_metadata,
+                                       preproc_fn=preproc_fn,
+                                       image_shape=input_shape,
+                                       batch_size=config["batch_size"],
+                                       dataset_len=args.evalset_len,
+                                       shuffle=False,
+                                       repeat=False),
               steps_per_epoch=steps_per_epoch_train,
               validation_steps=steps_per_epoch_eval,
               epochs=config["epochs"],
               callbacks=callback_list,
-            #   callbacks=None,
-              class_weight={  # TODO: parameterize
-                  0: 2.12,
-                  1: 0.65
-    })
+              #   callbacks=None,
+              #   class_weight={  # TODO: parameterize
+              #       0: 2.12,
+              #       1: 0.65}
+              )
 
     # train_spec = tf.estimator.TrainSpec(
     #     input_fn=lambda: input_fn(tfrecords_train,

@@ -89,7 +89,7 @@ def coffee_net_v1(input_shape, transfer_learning=False):
                                 name="head_dense_1")(dropout)
     head = tf.keras.layers.BatchNormalization(name="batch_norm")(fc1)
     head = tf.keras.layers.Activation(activation="relu")(head)
-    # fc2 = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
-    fc2 = tf.keras.layers.Dense(1, activation='sigmoid', name='target')(head)
+    fc2 = tf.keras.layers.Dense(2, activation='softmax', name='target')(head)
+    # fc2 = tf.keras.layers.Dense(1, activation='sigmoid', name='target')(head)
 
     return tf.keras.Model(inputs=input_tensor, outputs=fc2)

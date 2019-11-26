@@ -14,19 +14,19 @@ def model_head(input_shape, backend_model, transfer_learning=True):
 
     reg_val = 5e-4
 
-    # K.set_learning_phase(0)
+    K.set_learning_phase(0)  # https://github.com/keras-team/keras/pull/9965
     base_model = backend_model(
-        include_top=True, input_shape=tuple(input_shape),layers=tf.keras.layers)
+        include_top=True, input_tensor=tf.keras.layers.Input(shape=input_shape, name="input_tensor"), layers=tf.keras.layers)
     base_model.trainable = not transfer_learning
-    # K.set_learning_phase(1)
-    head = tf.keras.layers.Dropout(0.5,name="dropout_head")(base_model.output)
+    K.set_learning_phase(1)
+    head = tf.keras.layers.Dropout(0.5, name="dropout_head")(base_model.output)
     head = tf.keras.layers.Dense(
         64, activation=None, kernel_regularizer=tf.keras.regularizers.l2(l=reg_val))(head)
     head = tf.keras.layers.BatchNormalization()(head)
     head = tf.keras.layers.Activation(activation="relu")(head)
 
-    head = tf.keras.layers.Dense(1,
-                                 activation='sigmoid',
+    head = tf.keras.layers.Dense(2,
+                                 activation='softmax',
                                  name='target')(head)
 
     return tf.keras.Model(inputs=base_model.input, outputs=head)
