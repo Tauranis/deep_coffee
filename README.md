@@ -169,6 +169,7 @@ python -m deep_coffee.ml.train_and_evaluate \
 
 ### Project Embeddings on TensorBoard
 
+```
 docker run \
 -v ${PWD}/dataset:/dataset \
 -v ${PWD}/trained_models:/trained_models \
@@ -177,9 +178,24 @@ docker run \
 --rm --gpus all deep_coffee \
 python -m deep_coffee.ml.project_embeddings \
 --tfrecord_path "/dataset/tfrecords/eval*" \
---output_dir /trained_models/coffee_net_v1/20200112-193012 \
---ckpt_path /trained_models/coffee_net_v1/20200112-193012/model.hdf5 \
+--output_dir /trained_models/coffee_net_v1/20200112-210616 \
+--ckpt_path /trained_models/coffee_net_v1/20200112-210616/model.hdf5 \
 --tft_artifacts_dir /dataset/tft_artifacts \
 --layer_name head_dense_1 \
 --dataset_len 264 \
 --input_dim 224
+```
+
+### Make prediction from a SavedModel
+
+```
+docker run \
+-v ${PWD}/dataset:/dataset \
+-v ${PWD}/trained_models:/trained_models \
+-v ${PWD}/deep_coffee:/src/deep_coffee \
+-v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.ml.load_and_test_saved_model \
+--model_path /trained_models/coffee_net_v1/20200112-230339/saved_model/ \
+--sample_image_path /dataset/bad/1acf8679-d50f-446c-b806-def7d073e244_135.jpg
+```

@@ -4,7 +4,7 @@ tfrecord_test: /dataset/tfrecords/test*
 network_name: coffee_net_v1
 learning_rate : 0.001
 batch_size: 32
-epochs: 50
+epochs: 5
 transfer_learning: false # train conv layers
 grad_cam_layers:
  - Conv1_1

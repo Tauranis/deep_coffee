@@ -1,5 +1,5 @@
 
-import logging
+
 from deep_coffee.ml.models import model_zoo, preproc_zoo
 from deep_coffee.ml.utils import list_tfrecords, PlotConfusionMatrixCallback, PlotROCCurveCallback
 from deep_coffee.ml.custom_metrics import CustomRecall
@@ -15,6 +15,7 @@ import os
 import datetime
 import numpy as np
 
+import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -84,22 +85,23 @@ if __name__ == "__main__":
     parser.add_argument("--evalset_len", required=True, type=int)
     parser.add_argument("--testset_len", required=True, type=int)
     parser.add_argument("--config_file", required=True)
-    parser.add_argument("--learning_rate", required=False, type=float, default=None)
-    parser.add_argument("--batch_size", required=False,type=int, default=None)
+    parser.add_argument("--learning_rate", required=False,
+                        type=float, default=None)
+    parser.add_argument("--batch_size", required=False, type=int, default=None)
     args = parser.parse_args()
 
     temp = tf.random.uniform([4, 32, 32, 3])
     tf.keras.applications.vgg16.preprocess_input(temp)
-    
 
     # Set input dimension
     input_shape = [args.input_dim, args.input_dim, 3]
-    
+
     # Parse config file
     config = yaml.load(tf.io.gfile.GFile(args.config_file).read())
 
     # Set learning rate and batch size
-    learning_rate = args.learning_rate if args.learning_rate is not None else config["learning_rate"]
+    learning_rate = args.learning_rate if args.learning_rate is not None else config[
+        "learning_rate"]
     batch_size = args.batch_size if args.batch_size is not None else config["batch_size"]
 
     logger.info("Load tfrecords...")
@@ -126,7 +128,7 @@ if __name__ == "__main__":
                   loss="sparse_categorical_crossentropy",
                   #   loss="binary_crossentropy",
                   metrics=["acc",
-                    #   CustomRecall(threshold=0.5,class_id=1,name="Recall_at_05")
+                           #   CustomRecall(threshold=0.5,class_id=1,name="Recall_at_05")
                            #    tf.keras.metrics.AUC(num_thresholds=20),
                            #    tf.keras.metrics.Precision(
                            #        thresholds=[0.1, 0.25, 0.5, 0.75, 0.9], class_id=1),
@@ -221,7 +223,7 @@ if __name__ == "__main__":
             grad_cam_x = np.concatenate(grad_cam_x, axis=0)[
                 :GRAD_CAM_GRID_SIZE]
 
-            for grad_cam_layer in config["grad_cam_layers"]:                
+            for grad_cam_layer in config["grad_cam_layers"]:
                 callback_grad_cam = GradCAMCallback(
                     validation_data=(grad_cam_x, None),
                     layer_name=grad_cam_layer,
@@ -229,9 +231,9 @@ if __name__ == "__main__":
                     output_dir=os.path.join(
                         tensorboard_dir, "grad_cam", grad_cam_layer, "class_{}".format(class_index)),
                 )
-                callback_list.append(callback_grad_cam)                
+                callback_list.append(callback_grad_cam)
     except KeyError:
-        
+
         pass
 
     model.fit(x=input_fn(tfrecords_path=tfrecords_train,
@@ -259,6 +261,10 @@ if __name__ == "__main__":
               #       0: 2.12,
               #       1: 0.65}
               )
+
+    # Export SavedModel
+    model.save(os.path.join(output_dir, "saved_model"),
+               include_optimizer=False, save_format="tf")
 
     # train_spec = tf.estimator.TrainSpec(
     #     input_fn=lambda: input_fn(tfrecords_train,
