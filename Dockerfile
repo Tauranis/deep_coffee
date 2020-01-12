@@ -11,8 +11,8 @@ RUN apt install wget \
     && wget https://files.pythonhosted.org/packages/25/44/47f0722aea081697143fbcf5d2aa60d1aee4aaacb5869aee2b568974777b/tensorflow_gpu-2.0.0-cp36-cp36m-manylinux2010_x86_64.whl -O /assets/tensorflow_gpu-2.0.0-cp36-cp36m-manylinux2010_x86_64.whl
 
 COPY requirements.txt /assets/requirements.txt
-RUN pip install -r /assets/requirements.txt \
-    && pip install /assets/tensorflow_gpu-2.0.0-cp36-cp36m-manylinux2010_x86_64.whl --upgrade
+RUN pip install -r /assets/requirements.txt  && \
+    pip install /assets/tensorflow_gpu-2.0.0-cp36-cp36m-manylinux2010_x86_64.whl --upgrade
 
 COPY deep_coffee /app/deep_coffee
 COPY test /app/test

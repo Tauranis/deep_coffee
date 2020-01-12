@@ -24,7 +24,7 @@ def coffee_net_v1(input_shape, transfer_learning=False):
 
     """
 
-    reg_val = 5e-4
+    reg_val = 1e-4
 
     def _coffee_block(input_tensor, n_filters, activation='relu', block_name="1"):
         _conv1 = tf.keras.layers.Conv2D(n_filters,
@@ -65,15 +65,26 @@ def coffee_net_v1(input_shape, transfer_learning=False):
 
     input_tensor = tf.keras.layers.Input(shape=input_shape, name="input_tensor")
 
+    # block_1 = _coffee_block(input_tensor, n_filters=32,
+    #                         block_name="1", activation=None)
+    # block_2 = _coffee_block(block_1, n_filters=64,
+    #                         block_name="2", activation=None)
+    # block_3 = _coffee_block(block_2, n_filters=128,
+    #                         block_name="3", activation=None)
+    # block_4 = _coffee_block(block_3, n_filters=256,
+    #                         block_name="4", activation=None)
+    # block_5 = _coffee_block(block_4, n_filters=512,
+    #                         block_name="5", activation=None)
+
     block_1 = _coffee_block(input_tensor, n_filters=32,
                             block_name="1", activation=None)
-    block_2 = _coffee_block(block_1, n_filters=64,
+    block_2 = _coffee_block(block_1, n_filters=32,
                             block_name="2", activation=None)
-    block_3 = _coffee_block(block_2, n_filters=128,
+    block_3 = _coffee_block(block_2, n_filters=32,
                             block_name="3", activation=None)
-    block_4 = _coffee_block(block_3, n_filters=256,
+    block_4 = _coffee_block(block_3, n_filters=64,
                             block_name="4", activation=None)
-    block_5 = _coffee_block(block_4, n_filters=512,
+    block_5 = _coffee_block(block_4, n_filters=64,
                             block_name="5", activation=None)
 
     global_avg_pool = tf.keras.layers.GlobalMaxPooling2D(

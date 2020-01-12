@@ -40,6 +40,7 @@ docker run -it \
 -v ${PWD}/dataset:/dataset \
 -v ${PWD}/trained_models:/trained_models \
 -v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
+-p 6006:6006 \
 --rm --gpus all deep_coffee bash
 ```
 
@@ -127,7 +128,7 @@ python -m deep_coffee.ml.images_to_tfrecords \
 --temp-dir /tmp
 ```
 
-### Decode dataset from tfrecords to images (just for testing)
+### Decode dataset from tfrecords to images (debug)
 ```
 docker run \
 -v ${PWD}/dataset:/dataset \
@@ -161,8 +162,24 @@ python -m deep_coffee.ml.train_and_evaluate \
 --trainset_len 1265 \
 --evalset_len 264 \
 --testset_len 278 \
---config_file /app/deep_coffee/ml/config/mobilenet.yml \
+--config_file /app/deep_coffee/ml/config/coffee_net_v1.yml \
 --learning_rate 0.0001 \
 --batch_size 8
 ```
 
+### Project Embeddings on TensorBoard
+
+docker run \
+-v ${PWD}/dataset:/dataset \
+-v ${PWD}/trained_models:/trained_models \
+-v ${PWD}/deep_coffee:/src/deep_coffee \
+-v ${PWD}/keras_pretrained_models:/root/.keras/models/ \
+--rm --gpus all deep_coffee \
+python -m deep_coffee.ml.project_embeddings \
+--tfrecord_path "/dataset/tfrecords/eval*" \
+--output_dir /trained_models/coffee_net_v1/20200112-193012 \
+--ckpt_path /trained_models/coffee_net_v1/20200112-193012/model.hdf5 \
+--tft_artifacts_dir /dataset/tft_artifacts \
+--layer_name head_dense_1 \
+--dataset_len 264 \
+--input_dim 224

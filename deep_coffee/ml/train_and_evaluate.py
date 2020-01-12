@@ -140,7 +140,7 @@ if __name__ == "__main__":
     datetime_now_str = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     output_dir = os.path.join(
         args.output_dir, config["network_name"], datetime_now_str)
-    ckpt_dir = os.path.join(output_dir, "model.ckpt")
+    ckpt_dir = os.path.join(output_dir, "model.hdf5")
     tensorboard_dir = os.path.join(output_dir, "tensorboard")
 
     callback_list = []
@@ -149,7 +149,7 @@ if __name__ == "__main__":
                                                             monitor="val_loss",
                                                             save_best_only=True,
                                                             save_freq="epoch")
-    # callback_list.append(callback_save_ckpt)
+    callback_list.append(callback_save_ckpt)
 
     callback_tensorboard = tf.keras.callbacks.TensorBoard(log_dir=tensorboard_dir,
                                                           histogram_freq=10,
