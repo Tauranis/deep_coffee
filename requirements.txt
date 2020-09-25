@@ -9,4 +9,4 @@ seaborn==0.9.0
 scikit-learn==0.21.3
 tf-explain==0.1.0
 tensorboard==1.15.0
-tensorflow-gpu==2.0.1
+tensorflow-gpu==2.0.3
